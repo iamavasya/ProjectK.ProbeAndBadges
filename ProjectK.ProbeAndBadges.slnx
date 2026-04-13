@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ProjectK.ProbeAndBadges.Abstractions/ProjectK.ProbeAndBadges.Abstractions.csproj" />
+    <Project Path="src/ProjectK.ProbeAndBadges.DependencyInjection/ProjectK.ProbeAndBadges.DependencyInjection.csproj" />
+    <Project Path="src/ProjectK.ProbeAndBadges/ProjectK.ProbeAndBadges.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ProjectK.ProbeAndBadges.UnitTests/ProjectK.ProbeAndBadges.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/ProjectK.ProbeAndBadges.AspNetDemo/ProjectK.ProbeAndBadges.AspNetDemo.csproj" />
+    <Project Path="samples/ProjectK.ProbeAndBadges.ConsoleDemo/ProjectK.ProbeAndBadges.ConsoleDemo.csproj" />
+  </Folder>
+</Solution>

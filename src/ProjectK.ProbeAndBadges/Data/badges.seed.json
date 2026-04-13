@@ -1,0 +1,40 @@
+{
+  "Meta": {
+    "ParserVersion": "seed-1.0.0",
+    "ToolAuthor": "Rostyslav Mukha",
+    "ParserComment": "Embedded seed dataset for startup.",
+    "ParsedAtUtc": "2026-04-13T00:00:00Z",
+    "SourceUrl": "https://plast.global/biblioteka-vmilostej/",
+    "FixerEnabled": true,
+    "FixerMode": "soft",
+    "TotalBadges": 2
+  },
+  "Badges": [
+    {
+      "Id": "avtoznavstvo-i",
+      "Title": "Автознавство I",
+      "ImagePath": "/images/badges/avtoznavstvo_i_color.svg",
+      "Country": "Україна",
+      "Specialization": "Загальні вмілості",
+      "Status": "Затверджена",
+      "Level": 1,
+      "LastUpdated": "ср, 29.04.2020",
+      "SeekerRequirements": "Знати базові правила безпеки та основи будови авто.",
+      "InstructorRequirements": "",
+      "FixNotes": []
+    },
+    {
+      "Id": "aktorstvo-i",
+      "Title": "Акторство I",
+      "ImagePath": "/images/badges/aktorstvo_i_color.svg",
+      "Country": "Україна",
+      "Specialization": "Мистецька",
+      "Status": "Затверджена",
+      "Level": 1,
+      "LastUpdated": "вт, 28.04.2020",
+      "SeekerRequirements": "Прочитати три драматичні твори та відвідати вистави.",
+      "InstructorRequirements": "",
+      "FixNotes": []
+    }
+  ]
+}

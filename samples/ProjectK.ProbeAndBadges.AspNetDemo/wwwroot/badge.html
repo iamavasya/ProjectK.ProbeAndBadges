@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Детальний опис вмілості</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f5ef;
+      --paper: #fffdf8;
+      --ink: #16213e;
+      --accent: #c74b50;
+      --muted: #687089;
+      --line: #e4ddd0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(199,75,80,0.11), transparent 30%),
+        radial-gradient(circle at 90% 0%, rgba(22,33,62,0.12), transparent 34%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 16px 40px;
+    }
+
+    .back {
+      display: inline-block;
+      margin-bottom: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(22, 33, 62, 0.08);
+    }
+
+    .head {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .img {
+      height: 160px;
+      border: 1px solid #e6dfd0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f6efe2, #fffaf0);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .img img {
+      width: 112px;
+      height: 112px;
+      object-fit: contain;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      line-height: 1.25;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .pill {
+      background: #f0ebe0;
+      border: 1px solid #e2d8c7;
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+
+    .sections {
+      display: grid;
+      gap: 12px;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fffefb;
+      padding: 12px;
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .text {
+      margin: 0;
+      white-space: pre-wrap;
+      color: #1d2437;
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    @media (max-width: 760px) {
+      .head {
+        grid-template-columns: 1fr;
+      }
+
+      .img {
+        height: 132px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <a class="back" href="/">← Назад до списку</a>
+    <section class="card" id="root">
+      <p class="muted">Завантаження...</p>
+    </section>
+  </main>
+
+  <script>
+    async function boot() {
+      const id = new URLSearchParams(window.location.search).get('id');
+      const root = document.getElementById('root');
+
+      if (!id) {
+        root.innerHTML = '<p class="muted">Не передано id вмілості.</p>';
+        return;
+      }
+
+      const res = await fetch(`/api/badges/${encodeURIComponent(id)}`);
+      if (res.status === 404) {
+        root.innerHTML = `<p class="muted">Вмілість з id ${escapeHtml(id)} не знайдена.</p>`;
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const badge = await res.json();
+      renderBadge(root, badge);
+    }
+
+    function renderBadge(root, b) {
+      const image = b.imagePath
+        ? `<img src="${b.imagePath}" alt="${escapeHtml(b.title)}" />`
+        : '<span class="muted">No image</span>';
+
+      root.innerHTML = `
+        <div class="head">
+          <div class="img">${image}</div>
+          <div>
+            <h1>${escapeHtml(b.title)}</h1>
+            <div class="meta">
+              <span class="pill">ID: ${escapeHtml(b.id)}</span>
+              <span class="pill">${escapeHtml(b.country || '-')}</span>
+              <span class="pill">${escapeHtml(b.specialization || '-')}</span>
+              <span class="pill">${escapeHtml(b.status || '-')}</span>
+              <span class="pill">Level: ${b.level ?? '-'}</span>
+              <span class="pill">Updated: ${escapeHtml(b.lastUpdated || '-')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sections">
+          <article class="section">
+            <h2>Вимоги здобувача</h2>
+            <p class="text">${escapeHtml(b.seekerRequirements || '-')}</p>
+          </article>
+
+          <article class="section">
+            <h2>Вимоги інструктора</h2>
+            <p class="text">${escapeHtml(b.instructorRequirements || '-')}</p>
+          </article>
+
+          <article class="section">
+            <h2>Fix Notes</h2>
+            <p class="text">${Array.isArray(b.fixNotes) && b.fixNotes.length ? escapeHtml(b.fixNotes.join('\n')) : '-'}</p>
+          </article>
+        </div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    boot().catch(err => {
+      console.error(err);
+      document.getElementById('root').innerHTML = `<p class="muted">Помилка: ${escapeHtml(err?.message || String(err))}</p>`;
+    });
+  </script>
+</body>
+</html>
