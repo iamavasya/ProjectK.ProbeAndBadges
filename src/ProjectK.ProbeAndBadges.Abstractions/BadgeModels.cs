@@ -32,3 +32,22 @@ public sealed record BadgeQuery(
     string? Status = null,
     int? Level = null
 );
+
+public sealed record Probe(
+    string Id,
+    string Title,
+    IReadOnlyList<ProbePoint> Points,
+    IReadOnlyList<ProbeSection>? Sections = null
+);
+
+public sealed record ProbePoint(
+    string Id,
+    string Title
+);
+
+public sealed record ProbeSection(
+    string Id,
+    string Code,
+    string Title,
+    IReadOnlyList<ProbePoint> Points
+);

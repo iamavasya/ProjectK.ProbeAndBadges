@@ -4,6 +4,7 @@ Read-only .NET library for loading and querying Plast badges data.
 
 It provides:
 - a stable catalog API over badges metadata and entities
+- a separate probes catalog API with probe sections and grouped responses
 - flexible data source loading (embedded, file, zip, URL, latest release)
 - optional runtime extraction of badge images from release zip
 - host-friendly dependency injection registration
@@ -32,7 +33,29 @@ var catalog = app.Services.GetRequiredService<IBadgesCatalog>();
 var all = catalog.GetAll();
 var byId = catalog.GetById("avtoznavstvo-i");
 var filtered = catalog.Query(new BadgeQuery(Text: "актор", Country: "Україна"));
+
+var probesCatalog = app.Services.GetRequiredService<IProbesCatalog>();
+var probes = probesCatalog.GetAll();
+var probe1Points = probesCatalog.GetPointsByProbeId("probe-1");
+var probe1Sections = probesCatalog.GetSectionsByProbeId("probe-1");
+var sectionPoints = probesCatalog.GetSectionPointsByProbeId("probe-1", "А");
 ```
+
+Probes seed currently contains 3 probes; points are available for the first two probes.
+
+## Probes API quick reference
+
+The demo host exposes grouped probes routes that are convenient for frontend rendering:
+
+- `GET /api/probes`
+- `GET /api/probes/{probeId}/points`
+- `GET /api/probes/{probeId}/sections`
+- `GET /api/probes/{probeId}/sections/{sectionKey}/points` where `sectionKey` can be section code (`А`, `Б`, `В`, ...) or section id
+- `GET /api/probes/{probeId}/grouped` (probe + sections + nested points in one payload)
+
+Grouped frontend demo page:
+
+- `GET /probes.html`
 
 ## Common configuration
 

@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Каталог проб</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f5ef;
+      --paper: #fffdf8;
+      --ink: #16213e;
+      --accent: #c74b50;
+      --muted: #687089;
+      --line: #e4ddd0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(199,75,80,0.12), transparent 30%),
+        radial-gradient(circle at 86% 2%, rgba(22,33,62,0.12), transparent 34%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 18px 42px;
+    }
+
+    .back {
+      display: inline-block;
+      margin-bottom: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .hero,
+    .panel,
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(22, 33, 62, 0.08);
+    }
+
+    .hero {
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.25rem, 3vw, 2rem);
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .panel {
+      padding: 14px;
+      margin-bottom: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1.2fr 1.5fr;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    select,
+    input {
+      border: 1px solid #d9d0be;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .pill {
+      border: 1px solid #dfd5c3;
+      border-radius: 999px;
+      background: #f2ecdf;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 4px 10px;
+    }
+
+    .sections {
+      display: grid;
+      gap: 12px;
+    }
+
+    .section {
+      overflow: hidden;
+      animation: rise 320ms ease both;
+    }
+
+    .section summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .section-title {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .code {
+      background: #f1e8d6;
+      border: 1px solid #e2d6c1;
+      border-radius: 8px;
+      padding: 1px 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #654123;
+    }
+
+    .section-name {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .section-count {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .points {
+      margin: 0;
+      padding: 10px 26px 16px 34px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .points li {
+      color: #20283d;
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--paper);
+    }
+
+    @media (max-width: 860px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <a class="back" href="/">← Назад до badges</a>
+
+    <section class="hero">
+      <h1>Каталог проб</h1>
+      <p class="sub">Grouped рендер: проба → розділи → точки.</p>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <label>
+          Обери пробу
+          <select id="probeSelect"></select>
+        </label>
+        <label>
+          Фільтр по тексту точки
+          <input id="search" type="search" placeholder="Наприклад: мандрівка, закон, гутірка" />
+        </label>
+      </div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="sections" id="sectionsRoot">
+      <div class="empty">Завантаження...</div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      probes: [],
+      grouped: null,
+      search: ''
+    };
+
+    async function boot() {
+      const probesRes = await fetch('/api/probes');
+      if (!probesRes.ok) {
+        throw new Error(`HTTP ${probesRes.status} while loading probes`);
+      }
+
+      state.probes = await probesRes.json();
+      renderProbeSelect();
+      bindEvents();
+
+      if (state.probes.length > 0) {
+        await loadGrouped(state.probes[0].id);
+      } else {
+        renderEmpty('Немає доступних проб у каталозі.');
+      }
+    }
+
+    function bindEvents() {
+      document.getElementById('probeSelect').addEventListener('change', async (event) => {
+        await loadGrouped(event.target.value);
+      });
+
+      document.getElementById('search').addEventListener('input', (event) => {
+        state.search = event.target.value.trim().toLowerCase();
+        renderSections();
+      });
+    }
+
+    function renderProbeSelect() {
+      const select = document.getElementById('probeSelect');
+      select.innerHTML = state.probes
+        .map(probe => `<option value="${escapeHtml(probe.id)}">${escapeHtml(probe.title)}</option>`)
+        .join('');
+    }
+
+    async function loadGrouped(probeId) {
+      const groupedRes = await fetch(`/api/probes/${encodeURIComponent(probeId)}/grouped`);
+      if (!groupedRes.ok) {
+        throw new Error(`HTTP ${groupedRes.status} while loading grouped probe`);
+      }
+
+      state.grouped = await groupedRes.json();
+      renderStats();
+      renderSections();
+    }
+
+    function renderStats() {
+      const stats = document.getElementById('stats');
+      const g = state.grouped || {};
+      const rows = [
+        `Probe: ${g.title || '-'}`,
+        `Sections: ${g.sectionsCount ?? 0}`,
+        `Total points: ${g.pointsCount ?? 0}`
+      ];
+      stats.innerHTML = rows.map(x => `<span class="pill">${escapeHtml(x)}</span>`).join('');
+    }
+
+    function renderSections() {
+      const root = document.getElementById('sectionsRoot');
+      const grouped = state.grouped;
+
+      if (!grouped || !Array.isArray(grouped.sections) || grouped.sections.length === 0) {
+        renderEmpty('У цій пробі наразі немає секцій.');
+        return;
+      }
+
+      const search = state.search;
+
+      const sections = grouped.sections
+        .map(section => {
+          const points = Array.isArray(section.points) ? section.points : [];
+          const filteredPoints = !search
+            ? points
+            : points.filter(point => String(point.title || '').toLowerCase().includes(search));
+
+          return {
+            ...section,
+            filteredPoints
+          };
+        })
+        .filter(section => section.filteredPoints.length > 0 || !search);
+
+      if (sections.length === 0) {
+        renderEmpty('За цим фільтром точок не знайдено.');
+        return;
+      }
+
+      root.innerHTML = sections.map((section, index) => {
+        const pointsHtml = section.filteredPoints.length
+          ? section.filteredPoints.map(point => `<li>${escapeHtml(point.title || '')}</li>`).join('')
+          : '<li>У цьому розділі немає точок.</li>';
+
+        return `
+          <details class="section" ${index === 0 ? 'open' : ''}>
+            <summary>
+              <div class="section-title">
+                <span class="code">${escapeHtml(section.code || '-')}</span>
+                <span class="section-name">${escapeHtml(section.title || 'Без назви')}</span>
+              </div>
+              <span class="section-count">${section.filteredPoints.length}/${section.pointsCount ?? section.filteredPoints.length}</span>
+            </summary>
+            <ol class="points">${pointsHtml}</ol>
+          </details>
+        `;
+      }).join('');
+    }
+
+    function renderEmpty(message) {
+      document.getElementById('sectionsRoot').innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    boot().catch(err => {
+      console.error(err);
+      renderEmpty(`Помилка: ${err?.message || String(err)}`);
+    });
+  </script>
+</body>
+</html>

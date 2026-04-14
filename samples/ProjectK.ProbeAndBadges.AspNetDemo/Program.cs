@@ -131,4 +131,98 @@ app.MapGet("/api/badges/{id}", (IBadgesCatalog catalog, string id) =>
     return badge is null ? Results.NotFound() : Results.Ok(badge);
 });
 
+app.MapGet("/api/probes", (IProbesCatalog catalog) =>
+{
+    var probes = catalog
+        .GetAll()
+        .Select(probe => new
+        {
+            probe.Id,
+            probe.Title,
+            pointsCount = probe.Points.Count,
+            sectionsCount = probe.Sections?.Count ?? 0
+        });
+
+    return Results.Ok(probes);
+});
+
+app.MapGet("/api/probes/{probeId}/sections", (IProbesCatalog catalog, string probeId) =>
+{
+    var probe = catalog.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    var sections = catalog
+        .GetSectionsByProbeId(probeId)
+        .Select(section => new
+        {
+            section.Id,
+            section.Code,
+            section.Title,
+            pointsCount = section.Points.Count
+        });
+
+    return Results.Ok(sections);
+});
+
+app.MapGet("/api/probes/{probeId}/grouped", (IProbesCatalog catalog, string probeId) =>
+{
+    var probe = catalog.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    var sections = catalog
+        .GetSectionsByProbeId(probeId)
+        .Select(section => new
+        {
+            section.Id,
+            section.Code,
+            section.Title,
+            points = section.Points,
+            pointsCount = section.Points.Count
+        })
+        .ToArray();
+
+    return Results.Ok(new
+    {
+        probe.Id,
+        probe.Title,
+        pointsCount = probe.Points.Count,
+        sectionsCount = sections.Length,
+        sections
+    });
+});
+
+app.MapGet("/api/probes/{probeId}/sections/{sectionKey}/points", (IProbesCatalog catalog, string probeId, string sectionKey) =>
+{
+    var probe = catalog.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    var sectionPoints = catalog.GetSectionPointsByProbeId(probeId, sectionKey);
+    if (sectionPoints.Count == 0)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(sectionPoints);
+});
+
+app.MapGet("/api/probes/{probeId}/points", (IProbesCatalog catalog, string probeId) =>
+{
+    var probe = catalog.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(catalog.GetPointsByProbeId(probeId));
+});
+
 app.Run();
