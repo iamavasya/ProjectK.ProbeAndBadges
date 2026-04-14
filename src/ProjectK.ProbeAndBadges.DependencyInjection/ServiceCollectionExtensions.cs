@@ -25,9 +25,11 @@ public static class ServiceCollectionExtensions
             var logger = sp.GetService<ILogger<BadgesCatalog>>();
             return new BadgesCatalog(options, logger);
         });
+        services.TryAddSingleton<ProbesCatalog>();
 
         services.TryAddSingleton<IBadgesCatalog>(sp => sp.GetRequiredService<BadgesCatalog>());
         services.TryAddSingleton<IBadgesAssetsStore>(sp => sp.GetRequiredService<BadgesCatalog>());
+        services.TryAddSingleton<IProbesCatalog>(sp => sp.GetRequiredService<ProbesCatalog>());
 
         return services;
     }

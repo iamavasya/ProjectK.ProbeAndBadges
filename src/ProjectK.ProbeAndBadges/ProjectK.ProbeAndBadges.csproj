@@ -12,10 +12,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>ProjectK.ProbeAndBadges</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Project-K</Authors>
+    <Description>Core read-only catalogs for Plast badges and probes.</Description>
+    <RepositoryUrl>https://github.com/Project-K</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Data\badges.seed.json" />
+    <EmbeddedResource Include="Data\probes.seed.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Link="README.md" />
   </ItemGroup>
 
 </Project>

@@ -15,6 +15,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>ProjectK.ProbeAndBadges.DependencyInjection</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Project-K</Authors>
+    <Description>Dependency injection registration extensions for Probe and Badges catalogs.</Description>
+    <RepositoryUrl>https://github.com/Project-K</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Link="README.md" />
+  </ItemGroup>
 
 </Project>

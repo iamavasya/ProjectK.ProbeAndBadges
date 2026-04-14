@@ -83,6 +83,49 @@ app.MapGet("/api/search", (IBadgesCatalog catalog, string? text, string? country
     var query = new BadgeQuery(text, country, specialization, status, level);
     return Results.Ok(catalog.Query(query));
 });
+
+app.MapGet("/api/probes", (IProbesCatalog probes) => Results.Ok(probes.GetAll()));
+
+app.MapGet("/api/probes/{probeId}/points", (IProbesCatalog probes, string probeId) =>
+{
+    var probe = probes.GetById(probeId);
+    return probe is null ? Results.NotFound() : Results.Ok(probes.GetPointsByProbeId(probeId));
+});
+
+app.MapGet("/api/probes/{probeId}/sections", (IProbesCatalog probes, string probeId) =>
+{
+    var probe = probes.GetById(probeId);
+    return probe is null ? Results.NotFound() : Results.Ok(probes.GetSectionsByProbeId(probeId));
+});
+
+app.MapGet("/api/probes/{probeId}/sections/{sectionKey}/points", (IProbesCatalog probes, string probeId, string sectionKey) =>
+{
+    var probe = probes.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    var points = probes.GetSectionPointsByProbeId(probeId, sectionKey);
+    return points.Count == 0 ? Results.NotFound() : Results.Ok(points);
+});
+
+app.MapGet("/api/probes/{probeId}/grouped", (IProbesCatalog probes, string probeId) =>
+{
+    var probe = probes.GetById(probeId);
+    if (probe is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new
+    {
+        probe.Id,
+        probe.Title,
+        probe.Points,
+        probe.Sections
+    });
+});
 ```
 
 ### Controller/Service usage
@@ -106,6 +149,21 @@ public sealed class BadgesFacade
     public string? GetAssetsPath() => _assets.AssetsDirectoryPath;
 
     public IReadOnlyList<Badge> Find(BadgeQuery query) => _catalog.Query(query);
+}
+
+public sealed class ProbesFacade
+{
+    private readonly IProbesCatalog _probes;
+
+    public ProbesFacade(IProbesCatalog probes)
+    {
+        _probes = probes;
+    }
+
+    public IReadOnlyList<ProbeSection> GetSections(string probeId) => _probes.GetSectionsByProbeId(probeId);
+
+    public IReadOnlyList<ProbePoint> GetSectionPoints(string probeId, string sectionKey) =>
+        _probes.GetSectionPointsByProbeId(probeId, sectionKey);
 }
 ```
 
