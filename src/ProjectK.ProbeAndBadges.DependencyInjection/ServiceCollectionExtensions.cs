@@ -30,7 +30,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IBadgesCatalog>(sp => sp.GetRequiredService<BadgesCatalog>());
         services.TryAddSingleton<IBadgesAssetsStore>(sp => sp.GetRequiredService<BadgesCatalog>());
         services.TryAddSingleton<IProbesCatalog>(sp => sp.GetRequiredService<ProbesCatalog>());
+        services.TryAddSingleton<IAwardImagesStore, AwardImagesStore>();
 
         return services;
     }
 }
+

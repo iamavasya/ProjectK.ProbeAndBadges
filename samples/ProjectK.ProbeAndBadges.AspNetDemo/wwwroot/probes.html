@@ -228,7 +228,7 @@
     </section>
   </main>
 
-  <script>
+  <script type="module">
     const state = {
       probes: [],
       grouped: null,
@@ -306,9 +306,9 @@
       const sections = grouped.sections
         .map(section => {
           const points = Array.isArray(section.points) ? section.points : [];
-          const filteredPoints = !search
-            ? points
-            : points.filter(point => String(point.title || '').toLowerCase().includes(search));
+          const filteredPoints = search
+            ? points.filter(point => String(point.title || '').toLowerCase().includes(search))
+            : points;
 
           return {
             ...section,
@@ -355,10 +355,12 @@
         .replaceAll("'", '&#39;');
     }
 
-    boot().catch(err => {
+    try {
+      await boot();
+    } catch (err) {
       console.error(err);
       renderEmpty(`Помилка: ${err?.message || String(err)}`);
-    });
+    }
   </script>
 </body>
 </html>

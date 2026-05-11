@@ -1,4 +1,6 @@
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http;
+using ProjectK.ProbeAndBadges.AspNetDemo;
 using ProjectK.ProbeAndBadges;
 using ProjectK.ProbeAndBadges.Abstractions;
 using ProjectK.ProbeAndBadges.DependencyInjection;
@@ -53,23 +55,17 @@ app.MapGet(
     "/api/search",
     (
         IBadgesCatalog catalog,
-        string? text,
-        string? country,
-        string? specialization,
-        string? status,
-        int? level,
-        int skip = 0,
-        int take = 24) =>
+        [AsParameters] BadgeSearchRequest request) =>
     {
-        var safeSkip = Math.Max(0, skip);
-        var safeTake = Math.Clamp(take, 1, 200);
+        var safeSkip = Math.Max(0, request.Skip);
+        var safeTake = Math.Clamp(request.Take, 1, 200);
 
         var query = new BadgeQuery(
-            Text: text,
-            Country: country,
-            Specialization: specialization,
-            Status: status,
-            Level: level);
+            Text: request.Text,
+            Country: request.Country,
+            Specialization: request.Specialization,
+            Status: request.Status,
+            Level: request.Level);
 
         var all = catalog.Query(query);
         var total = all.Count;
@@ -225,4 +221,4 @@ app.MapGet("/api/probes/{probeId}/points", (IProbesCatalog catalog, string probe
     return Results.Ok(catalog.GetPointsByProbeId(probeId));
 });
 
-app.Run();
+await app.RunAsync();

@@ -120,37 +120,22 @@ public sealed class ProbesCatalog : IProbesCatalog
             Sections: sections);
     }
 
-    private sealed class ProbesExportDto
-    {
-        public List<ProbeDto>? Probes { get; set; }
-    }
+    private sealed record ProbesExportDto(
+        List<ProbeDto>? Probes);
 
-    private sealed class ProbeDto
-    {
-        public string? Id { get; set; }
+    private sealed record ProbeDto(
+        string? Id,
+        string? Title,
+        List<ProbePointDto>? Points,
+        List<ProbeSectionDto>? Sections);
 
-        public string? Title { get; set; }
+    private sealed record ProbeSectionDto(
+        string? Id,
+        string? Code,
+        string? Title,
+        List<ProbePointDto>? Points);
 
-        public List<ProbePointDto>? Points { get; set; }
-
-        public List<ProbeSectionDto>? Sections { get; set; }
-    }
-
-    private sealed class ProbeSectionDto
-    {
-        public string? Id { get; set; }
-
-        public string? Code { get; set; }
-
-        public string? Title { get; set; }
-
-        public List<ProbePointDto>? Points { get; set; }
-    }
-
-    private sealed class ProbePointDto
-    {
-        public string? Id { get; set; }
-
-        public string? Title { get; set; }
-    }
+    private sealed record ProbePointDto(
+        string? Id,
+        string? Title);
 }

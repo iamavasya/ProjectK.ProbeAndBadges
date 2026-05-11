@@ -19,6 +19,17 @@ internal static class ReleaseDataZipAdapter
         SharedHttpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json");
     }
 
+    public sealed record LatestReleaseRequest(
+        string LatestReleaseApiUrl,
+        string AssetNamePattern,
+        string EntryPath,
+        TimeSpan Timeout,
+        string LocalCacheDirectoryPath,
+        bool EnableEtagCache,
+        bool EnableZipCache,
+        bool VerifyChecksum,
+        bool RequireChecksumAsset);
+
     public static BadgesDataLoadResult ReadBadgesJsonFromFile(string zipPath, string entryPath, ILogger logger)
     {
         var fullZipPath = Path.GetFullPath(zipPath);
@@ -76,35 +87,16 @@ internal static class ReleaseDataZipAdapter
     }
 
     public static BadgesDataLoadResult ReadBadgesJsonFromLatestRelease(
-        string latestReleaseApiUrl,
-        string assetNamePattern,
-        string entryPath,
-        TimeSpan timeout,
-        string localCacheDirectoryPath,
-        bool enableEtagCache,
-        bool enableZipCache,
-        bool verifyChecksum,
-        bool requireChecksumAsset,
+        LatestReleaseRequest request,
         ILogger logger)
     {
-        var cacheManifest = LoadCacheManifest(localCacheDirectoryPath, logger);
+        var cacheManifest = LoadCacheManifest(request.LocalCacheDirectoryPath, logger);
 
         try
         {
-            return ReadFromLatestReleaseCore(
-                latestReleaseApiUrl,
-                assetNamePattern,
-                entryPath,
-                timeout,
-                localCacheDirectoryPath,
-                enableEtagCache,
-                enableZipCache,
-                verifyChecksum,
-                requireChecksumAsset,
-                cacheManifest,
-                logger);
+            return ReadFromLatestReleaseCore(request, cacheManifest, logger);
         }
-        catch (Exception ex) when (enableZipCache && TryReadCachedZip(cacheManifest, entryPath, logger, out var cachedResult))
+        catch (Exception ex) when (request.EnableZipCache && TryReadCachedZip(cacheManifest, request.EntryPath, logger, out var cachedResult))
         {
             logger.LogWarning(ex, "Latest release fetch failed. Loaded badges json from local cached release zip.");
             return cachedResult;
@@ -112,63 +104,129 @@ internal static class ReleaseDataZipAdapter
     }
 
     private static BadgesDataLoadResult ReadFromLatestReleaseCore(
-        string latestReleaseApiUrl,
-        string assetNamePattern,
-        string entryPath,
-        TimeSpan timeout,
-        string localCacheDirectoryPath,
-        bool enableEtagCache,
-        bool enableZipCache,
-        bool verifyChecksum,
-        bool requireChecksumAsset,
+        LatestReleaseRequest request,
         LatestReleaseCacheManifest cacheManifest,
         ILogger logger)
     {
-        if (!Uri.TryCreate(latestReleaseApiUrl, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-        {
-            throw new InvalidDataException($"LatestReleaseApiUrl must be an absolute http/https URL. Value: '{latestReleaseApiUrl}'");
-        }
-
-        var normalizedPattern = string.IsNullOrWhiteSpace(assetNamePattern)
-            ? "plast-badges-data-*.zip"
-            : assetNamePattern.Trim();
+        var uri = ValidateHttpHttpsUri(request.LatestReleaseApiUrl, "LatestReleaseApiUrl");
+        var normalizedPattern = NormalizeAssetNamePattern(request.AssetNamePattern);
 
         logger.LogInformation(
             "Resolving latest release data asset. ApiUrl={ApiUrl}, Pattern={Pattern}, EtagCache={EtagCache}, ZipCache={ZipCache}, VerifyChecksum={VerifyChecksum}",
-            latestReleaseApiUrl,
+            request.LatestReleaseApiUrl,
             normalizedPattern,
-            enableEtagCache,
-            enableZipCache,
-            verifyChecksum);
+            request.EnableEtagCache,
+            request.EnableZipCache,
+            request.VerifyChecksum);
 
-        using var cts = new CancellationTokenSource(timeout);
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        if (enableEtagCache && !string.IsNullOrWhiteSpace(cacheManifest.ETag))
-        {
-            request.Headers.TryAddWithoutValidation("If-None-Match", cacheManifest.ETag);
-            logger.LogDebug("Sending If-None-Match with ETag={ETag}", cacheManifest.ETag);
-        }
-
-        using var response = SharedHttpClient
-            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token)
-            .GetAwaiter()
-            .GetResult();
+        using var response = SendLatestReleaseRequest(
+            uri,
+            request.EnableEtagCache ? cacheManifest.ETag : null,
+            request.Timeout,
+            logger);
 
         if (response.StatusCode == HttpStatusCode.NotModified)
         {
-            logger.LogInformation("Latest release returned 304 Not Modified.");
-            if (enableZipCache && TryReadCachedZip(cacheManifest, entryPath, logger, out var cachedResult))
-            {
-                logger.LogInformation("Loaded badges json from local cache after 304 response.");
-                return cachedResult;
-            }
-
-            throw new InvalidDataException("Latest release API returned 304, but no cached zip snapshot is available.");
+            return HandleNotModifiedResponse(cacheManifest, request.EntryPath, request.EnableZipCache, logger);
         }
 
         response.EnsureSuccessStatusCode();
 
+        var resolved = ResolveAssetsFromApiResponse(response, normalizedPattern, request.Timeout);
+        if (string.IsNullOrWhiteSpace(resolved.ZipAssetUrl) || string.IsNullOrWhiteSpace(resolved.ZipAssetName))
+        {
+            throw new InvalidDataException($"No release asset matched pattern '{normalizedPattern}' in latest release response.");
+        }
+
+        logger.LogInformation("Resolved latest release data asset: {AssetName}", resolved.ZipAssetName);
+
+        var zipBytes = DownloadBytes(resolved.ZipAssetUrl, request.Timeout);
+        var calculatedSha256 = ComputeSha256Hex(zipBytes);
+
+        logger.LogDebug("Downloaded release data zip size={Bytes} bytes, SHA256={Sha256}", zipBytes.Length, calculatedSha256);
+
+        VerifyReleaseChecksumIfNeeded(
+            request.VerifyChecksum,
+            request.RequireChecksumAsset,
+            resolved.ChecksumAssetUrl,
+            calculatedSha256,
+            request.Timeout,
+            logger);
+
+        var json = ReadEntryFromZipBytes(zipBytes, resolved.ZipAssetUrl, request.EntryPath);
+
+        if (request.EnableZipCache || request.EnableEtagCache)
+        {
+            return PersistLatestReleaseCache(
+                request.LocalCacheDirectoryPath,
+                response.Headers.ETag?.ToString(),
+                resolved,
+                zipBytes,
+                calculatedSha256,
+                json,
+                logger);
+        }
+
+        return new BadgesDataLoadResult(json, null, calculatedSha256);
+    }
+
+    private static Uri ValidateHttpHttpsUri(string url, string optionName)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidDataException($"{optionName} must be an absolute http/https URL. Value: '{url}'");
+        }
+
+        return uri;
+    }
+
+    private static string NormalizeAssetNamePattern(string assetNamePattern)
+    {
+        return string.IsNullOrWhiteSpace(assetNamePattern)
+            ? "plast-badges-data-*.zip"
+            : assetNamePattern.Trim();
+    }
+
+    private static HttpResponseMessage SendLatestReleaseRequest(Uri uri, string? etag, TimeSpan timeout, ILogger logger)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+
+        if (!string.IsNullOrWhiteSpace(etag))
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+            logger.LogDebug("Sending If-None-Match with ETag={ETag}", etag);
+        }
+
+        return SharedHttpClient
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    private static BadgesDataLoadResult HandleNotModifiedResponse(
+        LatestReleaseCacheManifest cacheManifest,
+        string entryPath,
+        bool enableZipCache,
+        ILogger logger)
+    {
+        logger.LogInformation("Latest release returned 304 Not Modified.");
+        if (enableZipCache && TryReadCachedZip(cacheManifest, entryPath, logger, out var cachedResult))
+        {
+            logger.LogInformation("Loaded badges json from local cache after 304 response.");
+            return cachedResult;
+        }
+
+        throw new InvalidDataException("Latest release API returned 304, but no cached zip snapshot is available.");
+    }
+
+    private static (string ZipAssetName, string ZipAssetUrl, string? ChecksumAssetUrl) ResolveAssetsFromApiResponse(
+        HttpResponseMessage response,
+        string normalizedPattern,
+        TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
         using var stream = response.Content.ReadAsStream(cts.Token);
         using var document = JsonDocument.Parse(stream);
 
@@ -177,145 +235,127 @@ internal static class ReleaseDataZipAdapter
             throw new InvalidDataException("Latest release payload does not contain 'assets' array.");
         }
 
-        var resolved = ResolveAssetsFromRelease(assetsElement, normalizedPattern);
-        if (string.IsNullOrWhiteSpace(resolved.ZipAssetUrl) || string.IsNullOrWhiteSpace(resolved.ZipAssetName))
+        return ResolveAssetsFromRelease(assetsElement, normalizedPattern);
+    }
+
+    private static void VerifyReleaseChecksumIfNeeded(
+        bool verifyChecksum,
+        bool requireChecksumAsset,
+        string? checksumAssetUrl,
+        string calculatedSha256,
+        TimeSpan timeout,
+        ILogger logger)
+    {
+        if (!verifyChecksum)
         {
-            throw new InvalidDataException($"No release asset matched pattern '{normalizedPattern}' in latest release response.");
+            return;
         }
 
-        logger.LogInformation("Resolved latest release data asset: {AssetName}", resolved.ZipAssetName);
-
-        var zipBytes = DownloadBytes(resolved.ZipAssetUrl, timeout);
-        var calculatedSha256 = ComputeSha256Hex(zipBytes);
-
-        logger.LogDebug("Downloaded release data zip size={Bytes} bytes, SHA256={Sha256}", zipBytes.Length, calculatedSha256);
-
-        if (verifyChecksum)
+        if (!string.IsNullOrWhiteSpace(checksumAssetUrl))
         {
-            if (!string.IsNullOrWhiteSpace(resolved.ChecksumAssetUrl))
+            var checksumText = DownloadString(checksumAssetUrl, timeout);
+            var expectedChecksum = TryParseChecksum(checksumText);
+            if (string.IsNullOrWhiteSpace(expectedChecksum))
             {
-                var checksumText = DownloadString(resolved.ChecksumAssetUrl, timeout);
-                var expectedChecksum = TryParseChecksum(checksumText);
-                if (string.IsNullOrWhiteSpace(expectedChecksum))
-                {
-                    throw new InvalidDataException($"Checksum asset '{resolved.ChecksumAssetUrl}' does not contain a valid SHA-256 value.");
-                }
+                throw new InvalidDataException($"Checksum asset '{checksumAssetUrl}' does not contain a valid SHA-256 value.");
+            }
 
-                if (!string.Equals(expectedChecksum, calculatedSha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidDataException("Downloaded release data zip failed SHA-256 checksum verification.");
-                }
+            if (!string.Equals(expectedChecksum, calculatedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Downloaded release data zip failed SHA-256 checksum verification.");
+            }
 
-                logger.LogInformation("Release zip checksum verification passed.");
-            }
-            else if (requireChecksumAsset)
-            {
-                throw new InvalidDataException("Checksum verification is required, but checksum asset was not found in latest release.");
-            }
-            else
-            {
-                logger.LogWarning("Checksum verification enabled but checksum asset was not found. Proceeding because checksum asset is optional.");
-            }
+            logger.LogInformation("Release zip checksum verification passed.");
+            return;
         }
 
-        var json = ReadEntryFromZipBytes(zipBytes, resolved.ZipAssetUrl, entryPath);
-
-        if (enableZipCache || enableEtagCache)
+        if (requireChecksumAsset)
         {
-            Directory.CreateDirectory(localCacheDirectoryPath);
-            var cachedZipFileName = string.IsNullOrWhiteSpace(resolved.ZipAssetName)
-                ? "latest-data.zip"
-                : resolved.ZipAssetName;
-            var cachedZipPath = Path.Combine(localCacheDirectoryPath, cachedZipFileName);
-
-            File.WriteAllBytes(cachedZipPath, zipBytes);
-
-            var etag = response.Headers.ETag?.ToString() ?? string.Empty;
-            var newManifest = new LatestReleaseCacheManifest
-            {
-                ETag = etag,
-                ZipAssetName = resolved.ZipAssetName,
-                ZipAssetUrl = resolved.ZipAssetUrl,
-                ChecksumAssetUrl = resolved.ChecksumAssetUrl,
-                CachedZipPath = cachedZipPath,
-                CachedZipSha256 = calculatedSha256,
-                CachedAtUtc = DateTimeOffset.UtcNow
-            };
-
-            SaveCacheManifest(localCacheDirectoryPath, newManifest, logger);
-            logger.LogInformation("Stored latest release cache. CachedZipPath={CachedZipPath}", cachedZipPath);
-
-            return new BadgesDataLoadResult(json, cachedZipPath, calculatedSha256);
+            throw new InvalidDataException("Checksum verification is required, but checksum asset was not found in latest release.");
         }
 
-        return new BadgesDataLoadResult(json, null, calculatedSha256);
+        logger.LogWarning("Checksum verification enabled but checksum asset was not found. Proceeding because checksum asset is optional.");
+    }
+
+    private static BadgesDataLoadResult PersistLatestReleaseCache(
+        string localCacheDirectoryPath,
+        string? etag,
+        (string ZipAssetName, string ZipAssetUrl, string? ChecksumAssetUrl) resolved,
+        byte[] zipBytes,
+        string calculatedSha256,
+        string json,
+        ILogger logger)
+    {
+        Directory.CreateDirectory(localCacheDirectoryPath);
+
+        var cachedZipFileName = string.IsNullOrWhiteSpace(resolved.ZipAssetName)
+            ? "latest-data.zip"
+            : resolved.ZipAssetName;
+        var cachedZipPath = Path.Combine(localCacheDirectoryPath, cachedZipFileName);
+
+        File.WriteAllBytes(cachedZipPath, zipBytes);
+
+        var newManifest = new LatestReleaseCacheManifest
+        {
+            ETag = etag ?? string.Empty,
+            ZipAssetName = resolved.ZipAssetName,
+            ZipAssetUrl = resolved.ZipAssetUrl,
+            ChecksumAssetUrl = resolved.ChecksumAssetUrl,
+            CachedZipPath = cachedZipPath,
+            CachedZipSha256 = calculatedSha256,
+            CachedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        SaveCacheManifest(localCacheDirectoryPath, newManifest, logger);
+        logger.LogInformation("Stored latest release cache. CachedZipPath={CachedZipPath}", cachedZipPath);
+
+        return new BadgesDataLoadResult(json, cachedZipPath, calculatedSha256);
     }
 
     private static (string ZipAssetName, string ZipAssetUrl, string? ChecksumAssetUrl) ResolveAssetsFromRelease(JsonElement assetsElement, string normalizedPattern)
     {
         var regex = WildcardToRegex(normalizedPattern);
-        string zipAssetName = string.Empty;
-        string zipAssetUrl = string.Empty;
-        string? checksumAssetUrl = null;
 
-        foreach (var asset in assetsElement.EnumerateArray())
-        {
-            var name = asset.TryGetProperty("name", out var nameElement)
-                ? nameElement.GetString() ?? string.Empty
-                : string.Empty;
+        var assets = assetsElement
+            .EnumerateArray()
+            .Select(MapReleaseAsset)
+            .ToArray();
 
-            if (!regex.IsMatch(name))
-            {
-                continue;
-            }
+        var zipAsset = assets
+            .FirstOrDefault(asset => regex.IsMatch(asset.Name) && !string.IsNullOrWhiteSpace(asset.DownloadUrl));
 
-            var browserDownloadUrl = asset.TryGetProperty("browser_download_url", out var urlElement)
-                ? urlElement.GetString() ?? string.Empty
-                : string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(browserDownloadUrl))
-            {
-                zipAssetName = name;
-                zipAssetUrl = browserDownloadUrl;
-                break;
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(zipAssetName))
+        if (string.IsNullOrWhiteSpace(zipAsset.Name))
         {
             return (string.Empty, string.Empty, null);
         }
 
         var checksumCandidates = new[]
         {
-            $"{zipAssetName}.sha256",
-            $"{zipAssetName}.sha256.txt",
-            $"{zipAssetName}.sha256sum"
+            $"{zipAsset.Name}.sha256",
+            $"{zipAsset.Name}.sha256.txt",
+            $"{zipAsset.Name}.sha256sum"
         };
 
-        foreach (var asset in assetsElement.EnumerateArray())
-        {
-            var name = asset.TryGetProperty("name", out var nameElement)
-                ? nameElement.GetString() ?? string.Empty
-                : string.Empty;
+        var checksumAssetUrl = assets
+            .Where(asset => checksumCandidates.Any(candidate => string.Equals(candidate, asset.Name, StringComparison.OrdinalIgnoreCase)))
+            .Select(asset => asset.DownloadUrl)
+            .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
 
-            if (!checksumCandidates.Any(candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
+        return (zipAsset.Name, zipAsset.DownloadUrl, checksumAssetUrl);
+    }
 
-            var browserDownloadUrl = asset.TryGetProperty("browser_download_url", out var urlElement)
-                ? urlElement.GetString() ?? string.Empty
-                : string.Empty;
+    private static ReleaseAssetInfo MapReleaseAsset(JsonElement asset)
+    {
+        var name = TryGetStringProperty(asset, "name");
+        var downloadUrl = TryGetStringProperty(asset, "browser_download_url");
+        return new ReleaseAssetInfo(name, downloadUrl);
+    }
 
-            if (!string.IsNullOrWhiteSpace(browserDownloadUrl))
-            {
-                checksumAssetUrl = browserDownloadUrl;
-                break;
-            }
-        }
-
-        return (zipAssetName, zipAssetUrl, checksumAssetUrl);
+    private static string TryGetStringProperty(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var propertyElement)
+            ? propertyElement.GetString() ?? string.Empty
+            : string.Empty;
     }
 
     private static Regex WildcardToRegex(string pattern)
@@ -540,6 +580,8 @@ internal static class ReleaseDataZipAdapter
 
         public DateTimeOffset CachedAtUtc { get; set; }
     }
+
+    private readonly record struct ReleaseAssetInfo(string Name, string DownloadUrl);
 
     private static string ReadEntryContent(ZipArchive archive, string source, string entryPath)
     {
