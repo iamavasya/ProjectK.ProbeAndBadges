@@ -145,9 +145,9 @@
     </section>
   </main>
 
-  <script>
+  <script type="module">
     async function boot() {
-      const id = new URLSearchParams(window.location.search).get('id');
+      const id = new URLSearchParams(globalThis.location.search).get('id');
       const root = document.getElementById('root');
 
       if (!id) {
@@ -218,10 +218,12 @@
         .replaceAll("'", '&#39;');
     }
 
-    boot().catch(err => {
+    try {
+      await boot();
+    } catch (err) {
       console.error(err);
       document.getElementById('root').innerHTML = `<p class="muted">Помилка: ${escapeHtml(err?.message || String(err))}</p>`;
-    });
+    }
   </script>
 </body>
 </html>

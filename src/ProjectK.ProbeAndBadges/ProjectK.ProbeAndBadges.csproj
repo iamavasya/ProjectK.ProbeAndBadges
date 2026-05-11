@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\ProjectK.ProbeAndBadges.Abstractions\ProjectK.ProbeAndBadges.Abstractions.csproj" />
@@ -24,6 +24,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Data\badges.seed.json" />
     <EmbeddedResource Include="Data\probes.seed.json" />
+    <EmbeddedResource Include="Data\awards-images\*.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,3 +32,4 @@
   </ItemGroup>
 
 </Project>
+

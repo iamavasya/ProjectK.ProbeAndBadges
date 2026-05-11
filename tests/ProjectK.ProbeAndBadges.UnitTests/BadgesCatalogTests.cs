@@ -427,91 +427,25 @@ public class BadgesCatalogTests
                 var latestApiCalls = 0;
                 var zipCalls = 0;
 
+                var serverConfig = new LatestReleaseServerConfig(
+                    RequestCount: 4,
+                    ApiPath: apiPath,
+                    DownloadPath: downloadPath,
+                    ChecksumPath: checksumPath,
+                    Prefix: prefix,
+                    Etag: etag,
+                    ZipBytes: zipBytes,
+                    Checksum: checksum);
+
                 using var listener = new HttpListener();
                 listener.Prefixes.Add(prefix);
                 listener.Start();
 
-                var serveTask = Task.Run(async () =>
-                {
-                    try
-                    {
-                        for (var i = 0; i < 4; i++)
-                        {
-                            var context = await listener.GetContextAsync();
-                                var path = context.Request.Url?.AbsolutePath?.TrimStart('/') ?? string.Empty;
-
-                                if (string.Equals(path, apiPath, StringComparison.OrdinalIgnoreCase))
-                                {
-                                        latestApiCalls++;
-                                        var incomingEtag = context.Request.Headers["If-None-Match"];
-                                        if (string.Equals(incomingEtag, etag, StringComparison.Ordinal))
-                                        {
-                                                context.Response.StatusCode = 304;
-                                                context.Response.Headers["ETag"] = etag;
-                                                context.Response.Close();
-                                                continue;
-                                        }
-
-                                        var payload = $$"""
-                                        {
-                                            "assets": [
-                                                {
-                                                    "name": "plast-badges-data-4.0.0.zip",
-                                                    "browser_download_url": "{{prefix}}{{downloadPath}}"
-                                                },
-                                                {
-                                                    "name": "plast-badges-data-4.0.0.zip.sha256",
-                                                    "browser_download_url": "{{prefix}}{{checksumPath}}"
-                                                }
-                                            ]
-                                        }
-                                        """;
-
-                                        var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
-                                        context.Response.StatusCode = 200;
-                                        context.Response.ContentType = "application/json";
-                                        context.Response.Headers["ETag"] = etag;
-                                        context.Response.ContentLength64 = bytes.Length;
-                                        await context.Response.OutputStream.WriteAsync(bytes);
-                                        context.Response.Close();
-                                        continue;
-                                }
-
-                                if (string.Equals(path, downloadPath, StringComparison.OrdinalIgnoreCase))
-                                {
-                                        zipCalls++;
-                                        context.Response.StatusCode = 200;
-                                        context.Response.ContentType = "application/zip";
-                                        context.Response.ContentLength64 = zipBytes.Length;
-                                        await context.Response.OutputStream.WriteAsync(zipBytes);
-                                        context.Response.Close();
-                                        continue;
-                                }
-
-                                if (string.Equals(path, checksumPath, StringComparison.OrdinalIgnoreCase))
-                                {
-                                        var bytes = System.Text.Encoding.UTF8.GetBytes(checksum);
-                                        context.Response.StatusCode = 200;
-                                        context.Response.ContentType = "text/plain";
-                                        context.Response.ContentLength64 = bytes.Length;
-                                        await context.Response.OutputStream.WriteAsync(bytes);
-                                        context.Response.Close();
-                                        continue;
-                                }
-
-                                    context.Response.StatusCode = 404;
-                                    context.Response.Close();
-                                }
-                            }
-                            catch (HttpListenerException)
-                            {
-                                // Listener may be stopped by test teardown while awaiting context.
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                // Listener may already be disposed during teardown.
-                        }
-                });
+                var serveTask = Task.Run(() => ServeLatestReleaseWithEtagAsync(
+                    listener,
+                    serverConfig,
+                    onLatestApiCall: () => latestApiCalls++,
+                    onZipCall: () => zipCalls++));
 
                 try
                 {
@@ -996,6 +930,146 @@ public class BadgesCatalogTests
                         tempCacheDir.Delete(recursive: true);
                     }
                 }
+
+                private static async Task ServeLatestReleaseWithEtagAsync(
+                    HttpListener listener,
+                    LatestReleaseServerConfig config,
+                    Action onLatestApiCall,
+                    Action onZipCall)
+                {
+                    try
+                    {
+                        for (var i = 0; i < config.RequestCount; i++)
+                        {
+                            var context = await listener.GetContextAsync();
+                            var path = context.Request.Url?.AbsolutePath?.TrimStart('/') ?? string.Empty;
+
+                            if (await TryHandleLatestApiRequestAsync(context, path, config, onLatestApiCall))
+                            {
+                                continue;
+                            }
+
+                            if (await TryHandleZipRequestAsync(context, path, config, onZipCall))
+                            {
+                                continue;
+                            }
+
+                            if (await TryHandleChecksumRequestAsync(context, path, config))
+                            {
+                                continue;
+                            }
+
+                            context.Response.StatusCode = 404;
+                            context.Response.Close();
+                        }
+                    }
+                    catch (HttpListenerException)
+                    {
+                        // Listener may be stopped by test teardown while awaiting context.
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Listener may already be disposed during teardown.
+                    }
+                }
+
+                private static async Task<bool> TryHandleLatestApiRequestAsync(
+                    HttpListenerContext context,
+                    string path,
+                    LatestReleaseServerConfig config,
+                    Action onLatestApiCall)
+                {
+                    if (!string.Equals(path, config.ApiPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    onLatestApiCall();
+                    var incomingEtag = context.Request.Headers["If-None-Match"];
+                    if (string.Equals(incomingEtag, config.Etag, StringComparison.Ordinal))
+                    {
+                        context.Response.StatusCode = 304;
+                        context.Response.Headers["ETag"] = config.Etag;
+                        context.Response.Close();
+                        return true;
+                    }
+
+                    var payload = $$"""
+                    {
+                        "assets": [
+                            {
+                                "name": "plast-badges-data-4.0.0.zip",
+                                "browser_download_url": "{{config.Prefix}}{{config.DownloadPath}}"
+                            },
+                            {
+                                "name": "plast-badges-data-4.0.0.zip.sha256",
+                                "browser_download_url": "{{config.Prefix}}{{config.ChecksumPath}}"
+                            }
+                        ]
+                    }
+                    """;
+
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "application/json";
+                    context.Response.Headers["ETag"] = config.Etag;
+                    context.Response.ContentLength64 = bytes.Length;
+                    await context.Response.OutputStream.WriteAsync(bytes);
+                    context.Response.Close();
+
+                    return true;
+                }
+
+                private static async Task<bool> TryHandleZipRequestAsync(
+                    HttpListenerContext context,
+                    string path,
+                    LatestReleaseServerConfig config,
+                    Action onZipCall)
+                {
+                    if (!string.Equals(path, config.DownloadPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    onZipCall();
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "application/zip";
+                    context.Response.ContentLength64 = config.ZipBytes.Length;
+                    await context.Response.OutputStream.WriteAsync(config.ZipBytes);
+                    context.Response.Close();
+
+                    return true;
+                }
+
+                private static async Task<bool> TryHandleChecksumRequestAsync(
+                    HttpListenerContext context,
+                    string path,
+                    LatestReleaseServerConfig config)
+                {
+                    if (!string.Equals(path, config.ChecksumPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(config.Checksum);
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "text/plain";
+                    context.Response.ContentLength64 = bytes.Length;
+                    await context.Response.OutputStream.WriteAsync(bytes);
+                    context.Response.Close();
+
+                    return true;
+                }
+
+                private sealed record LatestReleaseServerConfig(
+                    int RequestCount,
+                    string ApiPath,
+                    string DownloadPath,
+                    string ChecksumPath,
+                    string Prefix,
+                    string Etag,
+                    byte[] ZipBytes,
+                    string Checksum);
 
                 private static string BuildAssetsLimitJson(string id)
                 {

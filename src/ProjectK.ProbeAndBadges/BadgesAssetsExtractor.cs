@@ -162,30 +162,13 @@ internal static class BadgesAssetsExtractor
         long maxExtractedSingleImageBytes,
         long maxExtractedImagesTotalBytes)
     {
-        if (maxExtractedImageEntries <= 0)
-        {
-            throw new InvalidDataException("MaxExtractedImageEntries must be greater than zero.");
-        }
+        ValidateExtractionLimitsConfiguration(
+            maxExtractedImageEntries,
+            maxExtractedSingleImageBytes,
+            maxExtractedImagesTotalBytes);
 
-        if (maxExtractedSingleImageBytes <= 0)
-        {
-            throw new InvalidDataException("MaxExtractedSingleImageBytes must be greater than zero.");
-        }
-
-        if (maxExtractedImagesTotalBytes <= 0)
-        {
-            throw new InvalidDataException("MaxExtractedImagesTotalBytes must be greater than zero.");
-        }
-
-        var normalizedImagesPrefix = imagesDirectoryName.Trim().Trim('/').Replace('\\', '/');
-        if (string.IsNullOrWhiteSpace(normalizedImagesPrefix))
-        {
-            throw new InvalidDataException("AssetsImagesDirectoryName must be a non-empty folder name.");
-        }
-
-        var normalizedBadgesEntryPath = string.IsNullOrWhiteSpace(badgesEntryPath)
-            ? "badges.json"
-            : badgesEntryPath.Trim().Trim('/').Replace('\\', '/');
+        var normalizedImagesPrefix = NormalizeImagesPrefix(imagesDirectoryName);
+        var normalizedBadgesEntryPath = NormalizeBadgesEntryPath(badgesEntryPath);
 
         var extractedCount = 0;
         long totalExtractedBytes = 0;
@@ -203,64 +186,140 @@ internal static class BadgesAssetsExtractor
 
         foreach (var entry in archive.Entries)
         {
-            var normalizedEntryPath = entry.FullName.Replace('\\', '/').TrimStart('/');
-            if (string.IsNullOrWhiteSpace(normalizedEntryPath) || normalizedEntryPath.EndsWith('/'))
+            if (!TryGetNormalizedImageEntryPath(entry, normalizedImagesPrefix, out var normalizedEntryPath))
             {
                 continue;
             }
 
-            ValidateSafeRelativePath(normalizedEntryPath);
+            var nextTotalBytes = ValidateImageEntryLimits(
+                entry,
+                normalizedEntryPath,
+                extractedCount,
+                totalExtractedBytes,
+                maxExtractedImageEntries,
+                maxExtractedSingleImageBytes,
+                maxExtractedImagesTotalBytes);
 
-            if (!normalizedEntryPath.StartsWith($"{normalizedImagesPrefix}/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var extension = Path.GetExtension(normalizedEntryPath);
-            if (!AllowedImageExtensions.Contains(extension))
-            {
-                continue;
-            }
-
-            if (entry.Length > maxExtractedSingleImageBytes)
-            {
-                throw new InvalidDataException(
-                    $"Image '{normalizedEntryPath}' exceeds MaxExtractedSingleImageBytes ({entry.Length} > {maxExtractedSingleImageBytes}).");
-            }
-
-            if (extractedCount + 1 > maxExtractedImageEntries)
-            {
-                throw new InvalidDataException(
-                    $"Extracted image entries exceed MaxExtractedImageEntries ({maxExtractedImageEntries}).");
-            }
-
-            var nextTotalBytes = totalExtractedBytes + entry.Length;
-            if (nextTotalBytes > maxExtractedImagesTotalBytes)
-            {
-                throw new InvalidDataException(
-                    $"Extracted image bytes exceed MaxExtractedImagesTotalBytes ({nextTotalBytes} > {maxExtractedImagesTotalBytes}).");
-            }
-
-            var destinationPath = Path.GetFullPath(Path.Combine(extractionRoot, normalizedEntryPath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!destinationPath.StartsWith(extractionRootFullPath, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException($"Zip entry path escapes extraction root: '{normalizedEntryPath}'.");
-            }
-
-            var destinationDirectory = Path.GetDirectoryName(destinationPath)
-                ?? throw new InvalidDataException($"Unable to resolve destination directory for '{normalizedEntryPath}'.");
-
-            Directory.CreateDirectory(destinationDirectory);
-
-            using var inputStream = entry.Open();
-            using var outputStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            inputStream.CopyTo(outputStream);
+            var destinationPath = ResolveDestinationPath(extractionRoot, extractionRootFullPath, normalizedEntryPath);
+            CopyZipEntryToFile(entry, destinationPath);
 
             totalExtractedBytes = nextTotalBytes;
             extractedCount++;
         }
 
         return extractedCount;
+    }
+
+    private static void ValidateExtractionLimitsConfiguration(
+        int maxExtractedImageEntries,
+        long maxExtractedSingleImageBytes,
+        long maxExtractedImagesTotalBytes)
+    {
+        if (maxExtractedImageEntries <= 0)
+        {
+            throw new InvalidDataException("MaxExtractedImageEntries must be greater than zero.");
+        }
+
+        if (maxExtractedSingleImageBytes <= 0)
+        {
+            throw new InvalidDataException("MaxExtractedSingleImageBytes must be greater than zero.");
+        }
+
+        if (maxExtractedImagesTotalBytes <= 0)
+        {
+            throw new InvalidDataException("MaxExtractedImagesTotalBytes must be greater than zero.");
+        }
+    }
+
+    private static string NormalizeImagesPrefix(string imagesDirectoryName)
+    {
+        var normalizedImagesPrefix = imagesDirectoryName.Trim().Trim('/').Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(normalizedImagesPrefix))
+        {
+            throw new InvalidDataException("AssetsImagesDirectoryName must be a non-empty folder name.");
+        }
+
+        return normalizedImagesPrefix;
+    }
+
+    private static string NormalizeBadgesEntryPath(string badgesEntryPath)
+    {
+        return string.IsNullOrWhiteSpace(badgesEntryPath)
+            ? "badges.json"
+            : badgesEntryPath.Trim().Trim('/').Replace('\\', '/');
+    }
+
+    private static bool TryGetNormalizedImageEntryPath(ZipArchiveEntry entry, string normalizedImagesPrefix, out string normalizedEntryPath)
+    {
+        normalizedEntryPath = entry.FullName.Replace('\\', '/').TrimStart('/');
+        if (string.IsNullOrWhiteSpace(normalizedEntryPath) || normalizedEntryPath.EndsWith('/'))
+        {
+            return false;
+        }
+
+        ValidateSafeRelativePath(normalizedEntryPath);
+
+        if (!normalizedEntryPath.StartsWith($"{normalizedImagesPrefix}/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(normalizedEntryPath);
+        return AllowedImageExtensions.Contains(extension);
+    }
+
+    private static long ValidateImageEntryLimits(
+        ZipArchiveEntry entry,
+        string normalizedEntryPath,
+        int extractedCount,
+        long totalExtractedBytes,
+        int maxExtractedImageEntries,
+        long maxExtractedSingleImageBytes,
+        long maxExtractedImagesTotalBytes)
+    {
+        if (entry.Length > maxExtractedSingleImageBytes)
+        {
+            throw new InvalidDataException(
+                $"Image '{normalizedEntryPath}' exceeds MaxExtractedSingleImageBytes ({entry.Length} > {maxExtractedSingleImageBytes}).");
+        }
+
+        if (extractedCount + 1 > maxExtractedImageEntries)
+        {
+            throw new InvalidDataException(
+                $"Extracted image entries exceed MaxExtractedImageEntries ({maxExtractedImageEntries}).");
+        }
+
+        var nextTotalBytes = totalExtractedBytes + entry.Length;
+        if (nextTotalBytes > maxExtractedImagesTotalBytes)
+        {
+            throw new InvalidDataException(
+                $"Extracted image bytes exceed MaxExtractedImagesTotalBytes ({nextTotalBytes} > {maxExtractedImagesTotalBytes}).");
+        }
+
+        return nextTotalBytes;
+    }
+
+    private static string ResolveDestinationPath(string extractionRoot, string extractionRootFullPath, string normalizedEntryPath)
+    {
+        var destinationPath = Path.GetFullPath(Path.Combine(extractionRoot, normalizedEntryPath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!destinationPath.StartsWith(extractionRootFullPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException($"Zip entry path escapes extraction root: '{normalizedEntryPath}'.");
+        }
+
+        return destinationPath;
+    }
+
+    private static void CopyZipEntryToFile(ZipArchiveEntry entry, string destinationPath)
+    {
+        var destinationDirectory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidDataException($"Unable to resolve destination directory for '{entry.FullName}'.");
+
+        Directory.CreateDirectory(destinationDirectory);
+
+        using var inputStream = entry.Open();
+        using var outputStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        inputStream.CopyTo(outputStream);
     }
 
     private static void ValidateExtractedImages(
@@ -281,26 +340,14 @@ internal static class BadgesAssetsExtractor
                 .Where(fileName => !string.IsNullOrWhiteSpace(fileName))!,
             StringComparer.OrdinalIgnoreCase);
 
-        var missingFiles = new List<string>();
-
-        foreach (var badge in badges)
-        {
-            if (string.IsNullOrWhiteSpace(badge.ImagePath))
-            {
-                continue;
-            }
-
-            var fileName = Path.GetFileName(badge.ImagePath.Replace('\\', '/'));
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                continue;
-            }
-
-            if (!availableFiles.Contains(fileName))
-            {
-                missingFiles.Add(fileName);
-            }
-        }
+        var missingFiles = badges
+            .Select(badge => badge.ImagePath)
+            .Where(imagePath => !string.IsNullOrWhiteSpace(imagePath))
+            .Select(imagePath => Path.GetFileName(imagePath.Replace('\\', '/')))
+            .Where(fileName => !string.IsNullOrWhiteSpace(fileName))
+            .Select(fileName => fileName!)
+            .Where(fileName => !availableFiles.Contains(fileName))
+            .ToList();
 
         if (missingFiles.Count > 0)
         {
@@ -392,14 +439,14 @@ internal static class BadgesAssetsExtractor
 
         keep.Add(Path.GetFullPath(currentSnapshotPath));
 
-        foreach (var directory in snapshotDirectories)
+        foreach (var directoryPath in snapshotDirectories.Select(directory => directory.FullName))
         {
-            if (keep.Contains(directory.FullName))
+            if (keep.Contains(directoryPath))
             {
                 continue;
             }
 
-            TryDeleteDirectory(directory.FullName, logger);
+            TryDeleteDirectory(directoryPath, logger);
         }
     }
 

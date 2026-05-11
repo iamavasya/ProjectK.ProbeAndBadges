@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,6 +10,8 @@ namespace ProjectK.ProbeAndBadges;
 public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
 {
     private const string EmbeddedSeedResourceName = "ProjectK.ProbeAndBadges.Data.badges.seed.json";
+    private const string DefaultBadgesJsonEntryPath = "badges.json";
+    private const string UnknownMetadataValue = "unknown";
 
     private readonly IReadOnlyList<Badge> _badges;
     private readonly Dictionary<string, Badge> _idIndex;
@@ -171,12 +174,12 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
             var badges = MapBadges(legacyBadges);
             var metadata = new BadgesMetadata(
                 ParserVersion: "legacy",
-                ToolAuthor: "unknown",
+                ToolAuthor: UnknownMetadataValue,
                 ParserComment: "Loaded from legacy badges array format.",
                 ParsedAtUtc: null,
                 SourceUrl: string.Empty,
                 FixerEnabled: false,
-                FixerMode: "unknown",
+                FixerMode: UnknownMetadataValue,
                 TotalBadges: badges.Length
             );
 
@@ -198,15 +201,7 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
             BadgesDataSource.EmbeddedSeed => ReadEmbeddedJson(logger),
             BadgesDataSource.JsonFile => ReadJsonFromFile(options.JsonFilePath, logger),
             BadgesDataSource.ReleaseDataZip => ReadJsonFromZip(options.ReleaseDataZipPath, options.ReleaseDataZipEntryPath, logger),
-            BadgesDataSource.ReleaseDataZipUrl => ReadJsonFromZipUrl(
-                options.ReleaseDataZipUrl,
-                options.ReleaseDataZipEntryPath,
-                options.RemoteRequestTimeoutSeconds,
-                options.LocalCacheDirectoryPath,
-                options.EnableLocalReleaseZipCache,
-                options.EnableAssetsExtraction,
-                options.DownloadedZipRetentionCount,
-                logger),
+            BadgesDataSource.ReleaseDataZipUrl => ReadJsonFromZipUrl(options, logger),
             _ => throw new InvalidOperationException($"Unsupported data source: {options.DataSource}")
         };
     }
@@ -226,28 +221,10 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
             if (!string.IsNullOrWhiteSpace(options.ReleaseDataZipUrl))
             {
                 logger.LogInformation("Auto mode selected direct release zip URL.");
-                return ReadJsonFromZipUrl(
-                    options.ReleaseDataZipUrl,
-                    options.ReleaseDataZipEntryPath,
-                    safeTimeout,
-                    options.LocalCacheDirectoryPath,
-                    options.EnableLocalReleaseZipCache,
-                    options.EnableAssetsExtraction,
-                    options.DownloadedZipRetentionCount,
-                    logger);
+                return ReadJsonFromZipUrl(options, logger);
             }
 
-            return ReadJsonFromLatestReleaseApi(
-                options.LatestReleaseApiUrl,
-                options.LatestReleaseAssetNamePattern,
-                options.ReleaseDataZipEntryPath,
-                safeTimeout,
-                options.LocalCacheDirectoryPath,
-                options.EnableLatestReleaseEtagCache,
-                options.EnableLocalReleaseZipCache || options.EnableAssetsExtraction,
-                options.VerifyReleaseZipChecksum,
-                options.RequireReleaseZipChecksumAsset,
-                logger);
+            return ReadJsonFromLatestReleaseApi(options, logger);
         }
         catch (Exception ex) when (options.AutoFallbackToEmbeddedSeed)
         {
@@ -296,78 +273,61 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
         }
 
         var entryPath = string.IsNullOrWhiteSpace(releaseZipEntryPath)
-            ? "badges.json"
+            ? DefaultBadgesJsonEntryPath
             : releaseZipEntryPath;
 
         return ReleaseDataZipAdapter.ReadBadgesJsonFromFile(releaseZipPath, entryPath, logger);
     }
 
-    private static BadgesDataLoadResult ReadJsonFromZipUrl(
-        string? releaseZipUrl,
-        string releaseZipEntryPath,
-        int timeoutSeconds,
-        string localCacheDirectoryPath,
-        bool enableZipCache,
-        bool enableAssetsExtraction,
-        int downloadedZipRetentionCount,
-        ILogger logger)
+    private static BadgesDataLoadResult ReadJsonFromZipUrl(BadgesCatalogOptions options, ILogger logger)
     {
-        if (string.IsNullOrWhiteSpace(releaseZipUrl))
+        if (string.IsNullOrWhiteSpace(options.ReleaseDataZipUrl))
         {
             throw new InvalidDataException("ReleaseDataZipUrl must be provided when DataSource is ReleaseDataZipUrl.");
         }
 
-        var entryPath = string.IsNullOrWhiteSpace(releaseZipEntryPath)
-            ? "badges.json"
-            : releaseZipEntryPath;
+        var entryPath = string.IsNullOrWhiteSpace(options.ReleaseDataZipEntryPath)
+            ? DefaultBadgesJsonEntryPath
+            : options.ReleaseDataZipEntryPath;
 
-        var safeTimeout = timeoutSeconds > 0 ? timeoutSeconds : 30;
-        var shouldPersistDownloadedZip = enableZipCache || enableAssetsExtraction;
+        var safeTimeout = options.RemoteRequestTimeoutSeconds > 0 ? options.RemoteRequestTimeoutSeconds : 30;
+        var shouldPersistDownloadedZip = options.EnableLocalReleaseZipCache || options.EnableAssetsExtraction;
 
         return ReleaseDataZipAdapter.ReadBadgesJsonFromUrl(
-            releaseZipUrl,
+            options.ReleaseDataZipUrl,
             entryPath,
             TimeSpan.FromSeconds(safeTimeout),
-            localCacheDirectoryPath,
+            options.LocalCacheDirectoryPath,
             shouldPersistDownloadedZip,
-            downloadedZipRetentionCount,
+            options.DownloadedZipRetentionCount,
             logger);
     }
 
-    private static BadgesDataLoadResult ReadJsonFromLatestReleaseApi(
-        string latestReleaseApiUrl,
-        string latestReleaseAssetNamePattern,
-        string releaseZipEntryPath,
-        int timeoutSeconds,
-        string localCacheDirectoryPath,
-        bool enableEtagCache,
-        bool enableZipCache,
-        bool verifyChecksum,
-        bool requireChecksumAsset,
-        ILogger logger)
+    private static BadgesDataLoadResult ReadJsonFromLatestReleaseApi(BadgesCatalogOptions options, ILogger logger)
     {
-        if (string.IsNullOrWhiteSpace(latestReleaseApiUrl))
+        if (string.IsNullOrWhiteSpace(options.LatestReleaseApiUrl))
         {
             throw new InvalidDataException("LatestReleaseApiUrl must be provided for automatic data source mode.");
         }
 
-        var entryPath = string.IsNullOrWhiteSpace(releaseZipEntryPath)
-            ? "badges.json"
-            : releaseZipEntryPath;
+        var entryPath = string.IsNullOrWhiteSpace(options.ReleaseDataZipEntryPath)
+            ? DefaultBadgesJsonEntryPath
+            : options.ReleaseDataZipEntryPath;
 
-        var safeTimeout = timeoutSeconds > 0 ? timeoutSeconds : 30;
+        var safeTimeout = options.RemoteRequestTimeoutSeconds > 0 ? options.RemoteRequestTimeoutSeconds : 30;
 
-        return ReleaseDataZipAdapter.ReadBadgesJsonFromLatestRelease(
-            latestReleaseApiUrl,
-            latestReleaseAssetNamePattern,
-            entryPath,
-            TimeSpan.FromSeconds(safeTimeout),
-            localCacheDirectoryPath,
-            enableEtagCache,
-            enableZipCache,
-            verifyChecksum,
-                requireChecksumAsset,
-                logger);
+        var request = new ReleaseDataZipAdapter.LatestReleaseRequest(
+            LatestReleaseApiUrl: options.LatestReleaseApiUrl,
+            AssetNamePattern: options.LatestReleaseAssetNamePattern,
+            EntryPath: entryPath,
+            Timeout: TimeSpan.FromSeconds(safeTimeout),
+            LocalCacheDirectoryPath: options.LocalCacheDirectoryPath,
+            EnableEtagCache: options.EnableLatestReleaseEtagCache,
+            EnableZipCache: options.EnableLocalReleaseZipCache || options.EnableAssetsExtraction,
+            VerifyChecksum: options.VerifyReleaseZipChecksum,
+            RequireChecksumAsset: options.RequireReleaseZipChecksumAsset);
+
+        return ReleaseDataZipAdapter.ReadBadgesJsonFromLatestRelease(request, logger);
     }
 
     private static Badge[] MapBadges(List<BadgeDto> badges)
@@ -391,19 +351,24 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
     private static BadgesMetadata MapMetadata(MetaDto? meta, int fallbackCount)
     {
         DateTimeOffset? parsedAt = null;
-        if (!string.IsNullOrWhiteSpace(meta?.ParsedAtUtc) && DateTimeOffset.TryParse(meta.ParsedAtUtc, out var parsed))
+        if (!string.IsNullOrWhiteSpace(meta?.ParsedAtUtc) &&
+            DateTimeOffset.TryParse(
+                meta.ParsedAtUtc,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
         {
             parsedAt = parsed;
         }
 
         return new BadgesMetadata(
-            ParserVersion: meta?.ParserVersion ?? "unknown",
-            ToolAuthor: meta?.ToolAuthor ?? "unknown",
+            ParserVersion: meta?.ParserVersion ?? UnknownMetadataValue,
+            ToolAuthor: meta?.ToolAuthor ?? UnknownMetadataValue,
             ParserComment: meta?.ParserComment ?? string.Empty,
             ParsedAtUtc: parsedAt,
             SourceUrl: meta?.SourceUrl ?? string.Empty,
             FixerEnabled: meta?.FixerEnabled ?? false,
-            FixerMode: meta?.FixerMode ?? "unknown",
+            FixerMode: meta?.FixerMode ?? UnknownMetadataValue,
             TotalBadges: meta?.TotalBadges ?? fallbackCount
         );
     }
@@ -485,54 +450,30 @@ public sealed class BadgesCatalog : IBadgesCatalog, IBadgesAssetsStore
         }
     }
 
-    private sealed class BadgesExportDto
-    {
-        public MetaDto? Meta { get; set; }
+    private sealed record BadgesExportDto(
+        MetaDto? Meta,
+        List<BadgeDto>? Badges);
 
-        public List<BadgeDto>? Badges { get; set; }
-    }
+    private sealed record MetaDto(
+        string? ParserVersion,
+        string? ToolAuthor,
+        string? ParserComment,
+        string? ParsedAtUtc,
+        string? SourceUrl,
+        bool? FixerEnabled,
+        string? FixerMode,
+        int? TotalBadges);
 
-    private sealed class MetaDto
-    {
-        public string? ParserVersion { get; set; }
-
-        public string? ToolAuthor { get; set; }
-
-        public string? ParserComment { get; set; }
-
-        public string? ParsedAtUtc { get; set; }
-
-        public string? SourceUrl { get; set; }
-
-        public bool? FixerEnabled { get; set; }
-
-        public string? FixerMode { get; set; }
-
-        public int? TotalBadges { get; set; }
-    }
-
-    private sealed class BadgeDto
-    {
-        public string? Id { get; set; }
-
-        public string? Title { get; set; }
-
-        public string? ImagePath { get; set; }
-
-        public string? Country { get; set; }
-
-        public string? Specialization { get; set; }
-
-        public string? Status { get; set; }
-
-        public int? Level { get; set; }
-
-        public string? LastUpdated { get; set; }
-
-        public string? SeekerRequirements { get; set; }
-
-        public string? InstructorRequirements { get; set; }
-
-        public List<string>? FixNotes { get; set; }
-    }
+    private sealed record BadgeDto(
+        string? Id,
+        string? Title,
+        string? ImagePath,
+        string? Country,
+        string? Specialization,
+        string? Status,
+        int? Level,
+        string? LastUpdated,
+        string? SeekerRequirements,
+        string? InstructorRequirements,
+        List<string>? FixNotes);
 }

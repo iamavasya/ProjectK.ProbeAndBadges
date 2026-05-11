@@ -305,7 +305,7 @@
     <section class="grid" id="grid"></section>
   </main>
 
-  <script>
+  <script type="module">
     const state = {
       text: '',
       country: '',
@@ -352,7 +352,7 @@
       fillSelect('country', filters.countries || [], 'Всі країни');
       fillSelect('specialization', filters.specializations || [], 'Всі спеціалізації');
       fillSelect('status', filters.statuses || [], 'Всі статуси');
-      fillSelect('level', (filters.levels || []).map(x => String(x)), 'Всі рівні');
+      fillSelect('level', (filters.levels || []).map(String), 'Всі рівні');
     }
 
     function fillSelect(id, values, defaultLabel) {
@@ -486,10 +486,12 @@
         .replaceAll("'", '&#39;');
     }
 
-    boot().catch(err => {
+    try {
+      await boot();
+    } catch (err) {
       console.error(err);
       document.body.innerHTML = `<pre style="padding:16px;color:#8b1f26">${escapeHtml(err?.stack || err?.message || String(err))}</pre>`;
-    });
+    }
   </script>
 </body>
 </html>
