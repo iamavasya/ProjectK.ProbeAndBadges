@@ -1,31 +1,37 @@
 import type { Award, Badge, Bundle, Entry, Kind, Override, Probe, ProbePoint, Requirement } from "./model";
 import { entryId, listOf, normalizeEntry, overrideKey } from "./model";
 
+/** Krai whose items are the general catalog every krai sees. */
+export const GENERAL_KRAI = "ua";
+
 /**
- * What a reader in one krai sees: retired items dropped, that krai's overrides applied, every
- * other krai's overrides ignored. The result carries no overrides, so consumers (Lilejka, the
+ * What a reader in one krai sees: retired items dropped, the general catalog plus that krai's own
+ * items (another krai's own items are left out), that krai's overrides applied, every other
+ * krai's overrides ignored. Without a krai, every krai's items are kept. The result carries no overrides, so consumers (Lilejka, the
  * admin preview) never need to know they exist.
  */
 export function resolve(catalog: Bundle, krai: string | null): Bundle {
   const overrides = new Map<string, Override>();
   if (krai) for (const o of catalog.overrides) if (o.krai === krai) overrides.set(o.target, o);
   const find = (kind: string, id: string) => overrides.get(`${kind}:${id}`);
+  const visible = (x: { status?: string; krai?: string | null }) =>
+    x.status !== "retired" && (!krai || !x.krai || x.krai === GENERAL_KRAI || x.krai === krai);
 
   return {
     schemaVersion: catalog.schemaVersion,
     source: { ...catalog.source, krai },
     categories: catalog.categories,
     badges: catalog.badges
-      .filter((b) => b.status !== "retired")
+      .filter(visible)
       .map((b) => applyBadge(b, find("badge", b.id)))
       .filter((b): b is Badge => b !== null),
     probes: catalog.probes
-      .filter((p) => p.status !== "retired")
+      .filter(visible)
       .map((p) => applyProbe(p, find("probe", p.id)))
       .filter((p): p is Probe => p !== null)
       .sort((a, b) => a.order - b.order),
     awards: catalog.awards
-      .filter((a) => a.status !== "retired")
+      .filter(visible)
       .map((a) => applyAward(a, find("award", a.id)))
       .filter((a): a is Award => a !== null),
     overrides: [],

@@ -96,6 +96,21 @@ describe("resolve", () => {
     expect(resolve(withOverrides(), null).badges[0].requirements[0].id).toBe("1");
   });
 
+  it("shows a krai the general catalog and its own items, not another krai's", () => {
+    const catalog: Bundle = {
+      ...base(),
+      badges: [
+        ...base().badges,
+        { ...base().badges[0], id: "pl-vlasna", krai: "pl" },
+        { ...base().badges[0], id: "cz-vlasna", krai: "cz" },
+      ],
+    };
+    const ids = (krai: string | null) => resolve(catalog, krai).badges.map((b) => b.id);
+    expect(ids("cz")).toEqual(["aktorstvo-i", "cz-vlasna"]);
+    expect(ids("ua")).toEqual(["aktorstvo-i"]);
+    expect(ids(null)).toEqual(["aktorstvo-i", "pl-vlasna", "cz-vlasna"]);
+  });
+
   it("merges a contribution by id and gives new items the contribution's krai", () => {
     const contribution = normalizeBundle({
       source: { krai: "cz" },
