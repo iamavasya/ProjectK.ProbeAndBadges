@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 /* Colours and type follow Project-K/BRANDBOOK.md: one green, one terracotta, ink, surface. */
 :root {
   --primary: #0e6e4e;
