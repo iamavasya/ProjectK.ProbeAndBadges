@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Каталог Лілейки</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Каталог Лілейки</div>
+    <nav id="tabs">
+      <button data-tab="badge" class="active">Вмілості</button>
+      <button data-tab="probe">Проби</button>
+      <button data-tab="award">Відзначення</button>
+      <button data-tab="submissions">Подання</button>
+      <button data-tab="editors" data-owner>Редактори</button>
+      <button data-tab="audit">Журнал</button>
+    </nav>
+    <div class="who">
+      <label>Край для перегляду
+        <select id="preview-krai"><option value="">усі (без доповнень)</option></select>
+      </label>
+      <span id="me"></span>
+    </div>
+  </header>
+
+  <main id="catalog-view">
+    <aside class="list">
+      <div class="list-tools">
+        <input id="search" type="search" placeholder="Пошук за назвою або id">
+        <div class="row">
+          <select id="filter-krai"><option value="">усі краї</option></select>
+          <select id="filter-status">
+            <option value="">усі статуси</option>
+            <option value="approved">затверджені</option>
+            <option value="trial">апробаційні</option>
+            <option value="retired">виведені</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="new-item" class="secondary">+ Новий</button>
+          <label class="button secondary">Завантажити zip<input id="zip" type="file" accept=".zip" hidden></label>
+        </div>
+      </div>
+      <ul id="items"></ul>
+      <div id="count" class="muted"></div>
+    </aside>
+    <section id="detail" class="detail">
+      <p class="muted empty">Оберіть запис зліва, створіть новий або завантажте zip з <code>catalog.json</code> і текою <code>images/</code>.</p>
+    </section>
+  </main>
+
+  <main id="submissions-view" hidden></main>
+  <main id="editors-view" hidden></main>
+  <main id="audit-view" hidden></main>
+
+  <dialog id="dialog"><div id="dialog-body"></div></dialog>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

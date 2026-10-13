@@ -60,6 +60,16 @@ public class CommittedCatalogTests
         });
     }
 
+    [Fact]
+    public void KraiContributionExample_IsValidAgainstTheCatalog()
+    {
+        var example = CatalogPackage.ReadFolder(Path.Combine(RepoRoot, "docs/examples/krai-contribution"));
+
+        var report = example.Validate(Catalog.Bundle, Catalog.ImageNames);
+
+        Assert.True(report.IsValid, string.Join('\n', report.Errors));
+    }
+
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

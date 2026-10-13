@@ -59,17 +59,19 @@ export async function publicCatalog(env: Env, origin: string, krai: string | nul
   const cacheKey = new Request(`${origin}/__cache/catalog/r${rev}/${krai ?? "-"}`);
   const cache = typeof caches !== "undefined" ? caches.default : undefined;
   const cached = await cache?.match(cacheKey);
-  let body: string;
+  let entry: { body: string; parsed: PublicCatalog };
   if (cached) {
-    body = await cached.text();
+    const body = await cached.text();
+    entry = { body, parsed: JSON.parse(body) as PublicCatalog };
   } else {
+    // The expensive path (~10 ms of CPU for the full catalog): once per revision and krai.
     const [catalog, images] = await Promise.all([loadCatalog(env), loadImages(env)]);
-    body = JSON.stringify(toPublic(resolve(catalog, krai), rev, krai, images, origin));
-    const put = cache?.put(cacheKey, new Response(body, { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }));
+    const parsed = toPublic(resolve(catalog, krai), rev, krai, images, origin);
+    entry = { body: JSON.stringify(parsed), parsed };
+    const put = cache?.put(cacheKey, new Response(entry.body, { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } }));
     if (put) ctx ? ctx.waitUntil(put) : await put;
   }
 
-  const entry = { body, parsed: JSON.parse(body) as PublicCatalog };
   if (memo.size > 32) memo.clear();
   memo.set(key, entry);
   return { rev, ...entry };

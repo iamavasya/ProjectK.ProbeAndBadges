@@ -22,7 +22,8 @@ import { checkFields, checkImage, error, imageType, isImageName, isKrai, type Is
 type App = { Bindings: Env; Variables: { user: User } };
 const app = new Hono<App>();
 
-const MAX_BUNDLE_BYTES = 1024 * 1024;
+// D1 rows are capped at 2 MB and a submission is stored as one row.
+const MAX_BUNDLE_BYTES = 1.5 * 1024 * 1024;
 const MAX_SUBMISSION_IMAGES = 500;
 
 // ---- public, read-only, cached ------------------------------------------------------------
@@ -359,7 +360,7 @@ function assess(catalog: Bundle, bundle: Bundle, stored: Set<string>, uploaded: 
 
 app.post("/v1/submissions", async (c) => {
   const text = await c.req.text();
-  if (text.length > MAX_BUNDLE_BYTES) return c.json({ error: "too_large", message: "catalog.json is limited to 1 MB." }, 413);
+  if (new TextEncoder().encode(text).length > MAX_BUNDLE_BYTES) return c.json({ error: "too_large", message: "catalog.json is limited to 1.5 MB; split the submission." }, 413);
   let raw: unknown;
   try {
     raw = JSON.parse(text);

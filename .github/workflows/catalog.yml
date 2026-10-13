@@ -1,0 +1,33 @@
+name: Catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Test library and catalog
+        run: dotnet test ./ProjectK.ProbeAndBadges.slnx --configuration Release
+
+  worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
