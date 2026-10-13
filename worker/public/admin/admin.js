@@ -133,7 +133,7 @@ function renderList() {
   $("#items").innerHTML = list
     .map(
       (x) => `<li data-id="${esc(x.id)}" class="${state.selected?.id === x.id ? "active" : ""}">
-        ${x.images?.color ? `<img loading="lazy" alt="" src="${imageSrc(x.images.color)}">` : `<span style="width:32px"></span>`}
+        ${x.images?.color ? `<img class="art" loading="lazy" alt="" src="${imageSrc(x.images.color)}">` : `<span style="width:32px"></span>`}
         <div><div class="t">${esc(x.title)}</div><div class="s">${esc(x.id)} · ${esc(x.krai ?? "—")}${x.status !== "approved" ? ` · ${STATUS[x.status]}` : ""}</div></div>
       </li>`,
     )
@@ -237,7 +237,7 @@ function previewHtml(kind, x, unpublished) {
   return `<div class="card">
     ${unpublished ? `<p class="muted">Цей запис API зараз не віддає; нижче він так, як збережений.</p>` : ""}
     <div class="preview">
-      <div>${color ? `<img alt="" src="${color}">` : ""}${bw ? `<img alt="" src="${bw}" title="ч/б">` : ""}</div>
+      <div>${color ? `<img class="art" alt="" src="${color}">` : ""}${bw ? `<img class="art" alt="" src="${bw}" title="ч/б">` : ""}</div>
       <div><h2>${esc(x.title)}</h2><div class="muted"><code>${esc(x.id)}</code></div><div class="tags">${tags}</div></div>
     </div>
     ${body}

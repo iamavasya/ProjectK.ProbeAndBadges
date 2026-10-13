@@ -16,13 +16,16 @@ const md = (text) =>
     .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
     .replace(/\n/g, "<br>");
 const kraiName = (k) => KRAI[k] ?? k;
+const plural = (n, one, few, many) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many}`;
 const fold = (s) => String(s ?? "").toLocaleLowerCase("uk");
 
 async function load() {
-  $("#state").textContent = "Завантажую каталог…";
+  $("#error").hidden = true;
   const res = await fetch(`/v1/catalog${state.krai ? `?krai=${state.krai}` : ""}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   state.catalog = await res.json();
+  const c = state.catalog;
+  $("#summary").textContent = `${plural(c.badges.length, "вмілість", "вмілості", "вмілостей")} · ${plural(c.probes.length, "проба", "проби", "проб")} · ${plural(c.awards.length, "відзначення", "відзначення", "відзначень")}${state.krai ? ` · як бачить край ${kraiName(state.krai)}` : ""}`;
   fillFilters();
   render();
   openFromHash();
@@ -41,9 +44,9 @@ function fillFilters() {
     $(sel).innerHTML = html;
     $(sel).value = [...$(sel).options].some((o) => o.value === v) ? v : "";
   };
-  keep("#filter-category", `<option value="">усі спеціалізації</option>` + c.categories.map((k) => `<option value="${esc(k.id)}">${esc(k.title)}</option>`).join(""));
+  keep("#filter-category", `<option value="">усі</option>` + c.categories.map((k) => `<option value="${esc(k.id)}">${esc(k.title)}</option>`).join(""));
   const ulady = new Set([...c.badges.flatMap((b) => b.ulady ?? []), ...c.probes.map((p) => p.ulad), ...c.awards.map((a) => a.ulad)].filter(Boolean));
-  keep("#filter-ulad", `<option value="">усі улади</option>` + Object.keys(ULADY).filter((u) => ulady.has(u)).map((u) => `<option value="${u}">${ULADY[u]}</option>`).join(""));
+  keep("#filter-ulad", `<option value="">усі</option>` + Object.keys(ULADY).filter((u) => ulady.has(u)).map((u) => `<option value="${u}">${ULADY[u]}</option>`).join(""));
 }
 
 function visible() {
@@ -71,19 +74,20 @@ function subtitle(x) {
 }
 
 function render() {
-  $("#filter-category").hidden = state.tab !== "badges";
-  $("#filter-status").hidden = state.tab !== "badges";
+  $("#field-category").hidden = state.tab !== "badges";
+  $("#field-status").hidden = state.tab !== "badges";
   const list = visible();
   $("#items").innerHTML = list
     .map(
       (x) => `<li><button data-id="${esc(x.id)}">
-        ${x.images?.color ? `<img loading="lazy" alt="" src="${esc(x.images.color)}">` : `<span class="noimg"></span>`}
-        <span><span class="t">${esc(x.title)}</span><span class="s" style="display:block">${esc(subtitle(x))}</span></span>
+        ${x.images?.color ? `<img class="art" loading="lazy" alt="" src="${esc(x.images.color)}">` : `<span class="noimg"></span>`}
+        <span><span class="t">${esc(x.title)}</span><span class="s">${esc(subtitle(x))}</span></span>
       </button></li>`,
     )
     .join("");
   $("#count").textContent = `${list.length} з ${state.catalog[state.tab].length} ${LABEL[state.tab]}`;
-  $("#state").textContent = list.length ? "" : "Нічого не знайдено.";
+  $("#empty").hidden = list.length > 0;
+  $("#items").hidden = list.length === 0;
 }
 
 function detailHtml(kind, x) {
@@ -95,7 +99,7 @@ function detailHtml(kind, x) {
   const cats = (x.categories ?? []).map((id) => state.catalog.categories.find((k) => k.id === id)?.title ?? id);
   const tags = [
     x.krai ? `<span class="tag">${esc(kraiName(x.krai))}</span>` : "",
-    x.status === "trial" ? `<span class="tag trial">апробаційна</span>` : "",
+    x.status === "trial" ? `<span class="tag info">апробаційна</span>` : "",
     x.level ? `<span class="tag">рівень ${x.level}</span>` : "",
     ...(x.ulady ?? (x.ulad ? [x.ulad] : [])).map((u) => `<span class="tag">${ULADY[u] ?? esc(u)}</span>`),
     ...cats.map((c) => `<span class="tag">${esc(c)}</span>`),
@@ -111,18 +115,18 @@ function detailHtml(kind, x) {
     body = `${prereqs.length ? `<div class="section-title">Спершу здобути</div><p>${prereqs.join(", ")}</p>` : ""}
       <div class="section-title">Вимоги</div>${reqs(x.requirements)}
       ${x.instructorRequirements ? `<div class="section-title">Інструктор</div><p>${md(x.instructorRequirements)}</p>` : ""}
-      ${x.author || x.updatedOn ? `<p class="muted">${x.author ? `Розробив: ${esc(x.author)}. ` : ""}${x.updatedOn ? `Оновлено ${esc(x.updatedOn)}.` : ""}</p>` : ""}`;
+      ${x.author || x.updatedOn ? `<p class="meta">${x.author ? `Розробив: ${esc(x.author)}. ` : ""}${x.updatedOn ? `Оновлено ${esc(x.updatedOn)}.` : ""}</p>` : ""}`;
   } else if (kind === "probes") {
-    body = x.sections.map((s) => `<div class="section-title">${esc(s.code)}. ${esc(s.title)}</div>${reqs(s.points, true)}`).join("") + (x.points.length ? reqs(x.points, true) : "");
+    body = x.sections.map((s) => `<h3 class="sec">${esc(s.code)}. ${esc(s.title)}</h3>${reqs(s.points, true)}`).join("") + (x.points.length ? reqs(x.points, true) : "");
   } else {
     body = `${x.description ? `<p>${md(x.description)}</p>` : ""}${x.requirements?.length ? `<div class="section-title">Вимоги</div>${reqs(x.requirements)}` : ""}`;
   }
   const img = x.images?.color ?? x.images?.bw;
   return `<div class="head${img ? "" : " noimg"}">
-      ${img ? `<div><img alt="" src="${esc(img)}"></div>` : ""}
+      ${img ? `<div><img class="art" alt="" src="${esc(img)}"></div>` : ""}
       <div><h2 id="detail-title">${esc(x.title)}</h2><div class="tags">${tags}</div></div>
-      <button class="close" aria-label="Закрити">×</button>
-    </div>${body}`;
+    </div>${body}
+    <div class="modal-actions"><button class="btn btn-secondary close" type="button">Закрити</button></div>`;
 }
 
 function openFromHash() {
@@ -141,7 +145,7 @@ function openFromHash() {
 
 function showTab(tab) {
   state.tab = tab;
-  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
   render();
 }
 
@@ -174,8 +178,15 @@ window.addEventListener("hashchange", openFromHash);
 window.addEventListener("popstate", openFromHash);
 
 function fail(e) {
-  $("#state").textContent = `Не вдалося завантажити каталог (${e.message}). Спробуйте оновити сторінку.`;
+  $("#summary").textContent = "";
+  $("#error-body").textContent = `Каталог не завантажився (${e.message}). Спробуй за хвилину.`;
+  $("#error").hidden = false;
 }
+
+$("#reset").addEventListener("click", () => {
+  for (const sel of ["#search", "#filter-category", "#filter-ulad", "#filter-status"]) $(sel).value = "";
+  render();
+});
 
 state.krai = new URLSearchParams(location.search).get("krai")?.toLowerCase().replace(/[^a-z]/g, "").slice(0, 3) ?? "";
 load().catch(fail);
