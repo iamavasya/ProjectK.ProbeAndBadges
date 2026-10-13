@@ -1,13 +1,11 @@
 import type { Award, Badge, Bundle, Entry, Kind, Override, Probe, ProbePoint, Requirement } from "./model";
 import { entryId, listOf, normalizeEntry, overrideKey } from "./model";
 
-/** Krai whose items are the general catalog every krai sees. */
-export const GENERAL_KRAI = "ua";
-
 /**
- * What a reader in one krai sees: retired items dropped, the general catalog plus that krai's own
- * items (another krai's own items are left out), that krai's overrides applied, every other
- * krai's overrides ignored. Without a krai, every krai's items are kept. The result carries no overrides, so consumers (Lilejka, the
+ * The catalog of one krai: retired items dropped, only items whose `krai` is that krai, with that
+ * krai's overrides applied and every other krai's overrides ignored. Without a krai, every item
+ * of every krai is kept and no override is applied. There is no "general" krai: the catalog does
+ * not claim which items apply beyond the krai they came from. The result carries no overrides, so consumers (Lilejka, the
  * admin preview) never need to know they exist.
  */
 export function resolve(catalog: Bundle, krai: string | null): Bundle {
@@ -15,7 +13,7 @@ export function resolve(catalog: Bundle, krai: string | null): Bundle {
   if (krai) for (const o of catalog.overrides) if (o.krai === krai) overrides.set(o.target, o);
   const find = (kind: string, id: string) => overrides.get(`${kind}:${id}`);
   const visible = (x: { status?: string; krai?: string | null }) =>
-    x.status !== "retired" && (!krai || !x.krai || x.krai === GENERAL_KRAI || x.krai === krai);
+    x.status !== "retired" && (!krai || x.krai === krai);
 
   return {
     schemaVersion: catalog.schemaVersion,

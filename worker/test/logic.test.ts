@@ -78,25 +78,27 @@ describe("resolve", () => {
     ...base(),
     overrides: normalizeBundle({
       overrides: [
-        { krai: "cz", target: "badge:aktorstvo-i", addRequirements: [{ id: "cz-1", text: "Виступить у Празі." }], removeRequirements: ["1"] },
-        { krai: "cz", target: "probe:probe-1", addPoints: [{ section: "А", id: "cz-probe-1-a-1", text: "Чехія" }] },
+        { krai: "ua", target: "badge:aktorstvo-i", addRequirements: [{ id: "ua-1", text: "Виступить у Києві." }], removeRequirements: ["1"] },
+        { krai: "ua", target: "probe:probe-1", addPoints: [{ section: "А", id: "ua-probe-1-a-1", text: "Україна" }] },
+        { krai: "cz", target: "badge:aktorstvo-i", title: "Чужа назва" },
         { krai: "pl", target: "badge:aktorstvo-i", hidden: true },
       ],
     }).overrides,
   });
 
   it("applies only the reader's krai overrides and drops retired items", () => {
-    const cz = resolve(withOverrides(), "cz");
-    expect(cz.badges.map((b) => b.id)).toEqual(["aktorstvo-i"]);
-    expect(cz.badges[0].requirements).toEqual([{ id: "cz-1", text: "Виступить у Празі." }]);
-    expect(cz.probes[0].sections[0].points.map((p) => p.id)).toEqual(["probe-1-a-1", "cz-probe-1-a-1"]);
-    expect(cz.overrides).toEqual([]);
+    const ua = resolve(withOverrides(), "ua");
+    expect(ua.badges.map((b) => b.id)).toEqual(["aktorstvo-i"]);
+    expect(ua.badges[0].title).toBe("Акторство I");
+    expect(ua.badges[0].requirements).toEqual([{ id: "ua-1", text: "Виступить у Києві." }]);
+    expect(ua.probes[0].sections[0].points.map((p) => p.id)).toEqual(["probe-1-a-1", "ua-probe-1-a-1"]);
+    expect(ua.overrides).toEqual([]);
 
     expect(resolve(withOverrides(), "pl").badges).toEqual([]);
     expect(resolve(withOverrides(), null).badges[0].requirements[0].id).toBe("1");
   });
 
-  it("shows a krai the general catalog and its own items, not another krai's", () => {
+  it("gives a krai only its own items", () => {
     const catalog: Bundle = {
       ...base(),
       badges: [
@@ -106,8 +108,9 @@ describe("resolve", () => {
       ],
     };
     const ids = (krai: string | null) => resolve(catalog, krai).badges.map((b) => b.id);
-    expect(ids("cz")).toEqual(["aktorstvo-i", "cz-vlasna"]);
+    expect(ids("cz")).toEqual(["cz-vlasna"]);
     expect(ids("ua")).toEqual(["aktorstvo-i"]);
+    expect(ids("de")).toEqual([]);
     expect(ids(null)).toEqual(["aktorstvo-i", "pl-vlasna", "cz-vlasna"]);
   });
 

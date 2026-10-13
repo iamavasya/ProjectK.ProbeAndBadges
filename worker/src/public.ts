@@ -46,6 +46,10 @@ export function toPublic(resolved: Bundle, rev: number, krai: string | null, ima
   };
 }
 
+/** Bump when the shape or the filtering of the public catalog changes: cached copies are keyed by
+ * revision only, so without this a deploy would keep serving the old result until the next edit. */
+const CACHE_VERSION = 2;
+
 const memo = new Map<string, { body: string; parsed: PublicCatalog }>();
 
 /** Public catalog for a krai at the current revision: isolate memory, then the Cache API,
@@ -56,7 +60,7 @@ export async function publicCatalog(env: Env, origin: string, krai: string | nul
   const hit = memo.get(key);
   if (hit) return { rev, ...hit };
 
-  const cacheKey = new Request(`${origin}/__cache/catalog/r${rev}/${krai ?? "-"}`);
+  const cacheKey = new Request(`${origin}/__cache/catalog/v${CACHE_VERSION}/r${rev}/${krai ?? "-"}`);
   const cache = typeof caches !== "undefined" ? caches.default : undefined;
   const cached = await cache?.match(cacheKey);
   let entry: { body: string; parsed: PublicCatalog };

@@ -183,7 +183,7 @@ async function renderDetail(view = "preview") {
     if (view === "api") {
       target.innerHTML = published
         ? `<p class="muted">Рівно те, що отримує Лілейка з <code>GET /v1/${KINDS[kind].plural}/${esc(id)}${krai ? `?krai=${esc(krai)}` : ""}</code>.</p><pre class="json">${esc(JSON.stringify(published, null, 2))}</pre>`
-        : `<p class="muted">API цього запису не віддає: він виведений або прихований для краю ${esc(krai)}.</p>`;
+        : `<p class="muted">API цього запису не віддає: він виведений або не належить краю ${esc(krai)}.</p>`;
     } else {
       target.innerHTML = previewHtml(kind, published ?? raw, !published);
       target.querySelectorAll("[data-goto]").forEach((a) =>

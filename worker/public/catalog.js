@@ -7,7 +7,7 @@ const GROUPS = { "upyu-vidznachennia": "Відзначення УПЮ", kv: "К�
 const KRAI = { ua: "Україна", pl: "Польща", cz: "Чехія", de: "Німеччина", gb: "Велика Британія", us: "США", ca: "Канада", au: "Австралія", ar: "Аргентина" };
 const LABEL = { badges: "вмілостей", probes: "проб", awards: "відзначень" };
 
-const state = { catalog: null, tab: "badges", krai: "" };
+const state = { catalog: null, kraiList: null, tab: "badges", krai: "" };
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const md = (text) =>
@@ -16,11 +16,6 @@ const md = (text) =>
     .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
     .replace(/\n/g, "<br>");
 const kraiName = (k) => KRAI[k] ?? k;
-// Entries of the Ukrainian krai (and entries without a krai) are the general catalog every krai
-// sees; another krai's own entries are shown only to that krai.
-const GENERAL = "ua";
-const seen = (x) => !state.krai || !x.krai || x.krai === GENERAL || x.krai === state.krai;
-const itemIds = (x) => [...(x.requirements ?? []), ...(x.points ?? []), ...(x.sections ?? []).flatMap((s) => s.points)].map((r) => r.id);
 const plural = (n, one, few, many) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many}`;
 const fold = (s) => String(s ?? "").toLocaleLowerCase("uk");
 
@@ -29,17 +24,13 @@ async function load() {
   const res = await fetch(`/v1/catalog${state.krai ? `?krai=${state.krai}` : ""}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   state.catalog = await res.json();
-  const c = state.catalog;
-  const n = (kind) => c[kind].filter(seen).length;
-  let summary = `${plural(n("badges"), "вмілість", "вмілості", "вмілостей")} · ${plural(n("probes"), "проба", "проби", "проб")} · ${plural(n("awards"), "відзначення", "відзначення", "відзначень")}`;
-  if (state.krai && state.krai !== GENERAL) {
-    const all = [...c.badges, ...c.probes, ...c.awards];
-    const own = all.filter((x) => x.krai === state.krai).length;
-    const changed = all.filter((x) => x.krai !== state.krai && itemIds(x).some((id) => id.startsWith(`${state.krai}-`))).length;
-    summary += own || changed
-      ? `. ${kraiName(state.krai)}: ${own} власних, ${changed} з доповненнями краю, решта загальні.`
-      : `. ${kraiName(state.krai)} поки не має власних записів чи доповнень, тож видно лише загальний каталог.`;
+  if (!state.kraiList) {
+    const all = state.krai ? await (await fetch("/v1/catalog")).json() : state.catalog;
+    state.kraiList = [...new Set([...all.badges, ...all.probes, ...all.awards].map((x) => x.krai).filter(Boolean))].sort();
   }
+  const c = state.catalog;
+  let summary = `${plural(c.badges.length, "вмілість", "вмілості", "вмілостей")} · ${plural(c.probes.length, "проба", "проби", "проб")} · ${plural(c.awards.length, "відзначення", "відзначення", "відзначень")}`;
+  if (state.krai) summary += ` краю ${kraiName(state.krai)}`;
   $("#summary").textContent = summary;
   fillFilters();
   render();
@@ -48,7 +39,8 @@ async function load() {
 
 function fillFilters() {
   const c = state.catalog;
-  const krai = new Set([...Object.keys(KRAI), ...c.badges.map((b) => b.krai).filter(Boolean)]);
+  // Only krai that actually have entries; the list comes from the unfiltered catalog.
+  const krai = new Set(state.kraiList);
   if (state.krai) krai.add(state.krai);
   $("#krai").innerHTML =
     `<option value="">усі краї</option>` +
@@ -73,7 +65,6 @@ function visible() {
   return state.catalog[state.tab]
     .filter(
       (x) =>
-        seen(x) &&
         (!q || texts(x).some((t) => fold(t).includes(q))) &&
         (state.tab !== "badges" || !category || x.categories?.includes(category)) &&
         (!ulad || (x.ulady ?? [x.ulad]).includes(ulad)) &&
@@ -101,7 +92,7 @@ function render() {
       </button></li>`,
     )
     .join("");
-  $("#count").textContent = `${list.length} з ${state.catalog[state.tab].filter(seen).length} ${LABEL[state.tab]}`;
+  $("#count").textContent = `${list.length} з ${state.catalog[state.tab].length} ${LABEL[state.tab]}`;
   $("#empty").hidden = list.length > 0;
   $("#items").hidden = list.length === 0;
 }
