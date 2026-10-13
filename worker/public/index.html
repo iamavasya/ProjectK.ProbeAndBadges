@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вмілості й проби Пласту</title>
+  <meta name="description" content="Вмілості, проби й відзначення Пласту для всіх уладів і країв: вимоги й зображення.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="catalog.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Вмілості й проби</div>
+    <nav id="tabs">
+      <button data-tab="badges" class="active">Вмілості</button>
+      <button data-tab="probes">Проби</button>
+      <button data-tab="awards">Відзначення</button>
+    </nav>
+    <label class="krai">Край
+      <select id="krai"><option value="">загальний каталог</option></select>
+    </label>
+  </header>
+
+  <section class="tools">
+    <input id="search" type="search" placeholder="Пошук за назвою або вимогами" aria-label="Пошук">
+    <select id="filter-category" aria-label="Спеціалізація"><option value="">усі спеціалізації</option></select>
+    <select id="filter-ulad" aria-label="Улад"><option value="">усі улади</option></select>
+    <select id="filter-status" aria-label="Статус">
+      <option value="">усі статуси</option>
+      <option value="approved">затверджені</option>
+      <option value="trial">апробаційні</option>
+    </select>
+    <span id="count" class="muted"></span>
+  </section>
+
+  <main>
+    <ul id="items" class="grid"></ul>
+    <p id="state" class="muted">Завантажую каталог…</p>
+  </main>
+
+  <dialog id="detail" aria-labelledby="detail-title"><div id="detail-body"></div></dialog>
+
+  <footer class="muted">
+    Ці дані також доступні через <a href="/v1/catalog">API</a>.
+    Редакторам: <a href="/admin/">адмінка</a>.
+  </footer>
+  <script type="module" src="catalog.js"></script>
+</body>
+</html>
