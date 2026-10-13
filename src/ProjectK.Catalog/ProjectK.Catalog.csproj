@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>ProjectK.Catalog</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Project-K</Authors>
+    <Description>Catalog format v2 for Plast badges, probes and awards: models, validation, krai overrides and bundles.</Description>
+    <RepositoryUrl>https://github.com/Project-K</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProjectK.Catalog.Tests" />
+  </ItemGroup>
+
+</Project>
