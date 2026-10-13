@@ -16,6 +16,11 @@ const md = (text) =>
     .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
     .replace(/\n/g, "<br>");
 const kraiName = (k) => KRAI[k] ?? k;
+// Entries of the Ukrainian krai (and entries without a krai) are the general catalog every krai
+// sees; another krai's own entries are shown only to that krai.
+const GENERAL = "ua";
+const seen = (x) => !state.krai || !x.krai || x.krai === GENERAL || x.krai === state.krai;
+const itemIds = (x) => [...(x.requirements ?? []), ...(x.points ?? []), ...(x.sections ?? []).flatMap((s) => s.points)].map((r) => r.id);
 const plural = (n, one, few, many) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many}`;
 const fold = (s) => String(s ?? "").toLocaleLowerCase("uk");
 
@@ -25,7 +30,17 @@ async function load() {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   state.catalog = await res.json();
   const c = state.catalog;
-  $("#summary").textContent = `${plural(c.badges.length, "вмілість", "вмілості", "вмілостей")} · ${plural(c.probes.length, "проба", "проби", "проб")} · ${plural(c.awards.length, "відзначення", "відзначення", "відзначень")}${state.krai ? ` · як бачить край ${kraiName(state.krai)}` : ""}`;
+  const n = (kind) => c[kind].filter(seen).length;
+  let summary = `${plural(n("badges"), "вмілість", "вмілості", "вмілостей")} · ${plural(n("probes"), "проба", "проби", "проб")} · ${plural(n("awards"), "відзначення", "відзначення", "відзначень")}`;
+  if (state.krai && state.krai !== GENERAL) {
+    const all = [...c.badges, ...c.probes, ...c.awards];
+    const own = all.filter((x) => x.krai === state.krai).length;
+    const changed = all.filter((x) => x.krai !== state.krai && itemIds(x).some((id) => id.startsWith(`${state.krai}-`))).length;
+    summary += own || changed
+      ? `. ${kraiName(state.krai)}: ${own} власних, ${changed} з доповненнями краю, решта загальні.`
+      : `. ${kraiName(state.krai)} поки не має власних записів чи доповнень, тож видно лише загальний каталог.`;
+  }
+  $("#summary").textContent = summary;
   fillFilters();
   render();
   openFromHash();
@@ -36,7 +51,7 @@ function fillFilters() {
   const krai = new Set([...Object.keys(KRAI), ...c.badges.map((b) => b.krai).filter(Boolean)]);
   if (state.krai) krai.add(state.krai);
   $("#krai").innerHTML =
-    `<option value="">загальний каталог</option>` +
+    `<option value="">усі краї</option>` +
     [...krai].map((k) => `<option value="${esc(k)}" ${k === state.krai ? "selected" : ""}>${esc(kraiName(k))}</option>`).join("");
 
   const keep = (sel, html) => {
@@ -58,6 +73,7 @@ function visible() {
   return state.catalog[state.tab]
     .filter(
       (x) =>
+        seen(x) &&
         (!q || texts(x).some((t) => fold(t).includes(q))) &&
         (state.tab !== "badges" || !category || x.categories?.includes(category)) &&
         (!ulad || (x.ulady ?? [x.ulad]).includes(ulad)) &&
@@ -85,7 +101,7 @@ function render() {
       </button></li>`,
     )
     .join("");
-  $("#count").textContent = `${list.length} з ${state.catalog[state.tab].length} ${LABEL[state.tab]}`;
+  $("#count").textContent = `${list.length} з ${state.catalog[state.tab].filter(seen).length} ${LABEL[state.tab]}`;
   $("#empty").hidden = list.length > 0;
   $("#items").hidden = list.length === 0;
 }
