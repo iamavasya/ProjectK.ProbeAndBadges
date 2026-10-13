@@ -1,0 +1,398 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Каталог Лілейки",
+    "version": "1",
+    "description": "Вмілості, проби й відзначення Пласту. Усі запити публічні: ключ не потрібен, CORS відкритий для будь-якого сайту. API віддає лише опубліковане: виведених з ужитку записів і нотаток редакторів у відповідях немає."
+  },
+  "servers": [{ "url": "/" }],
+  "tags": [
+    { "name": "Каталог", "description": "Увесь каталог одним документом і спеціалізації." },
+    { "name": "Вмілості" },
+    { "name": "Проби" },
+    { "name": "Відзначення", "description": "Відзначення УПЮ, а згодом КВ, ЗБ, ЛШ, ШБ та інші відзнаки. Групу задає поле `group`." },
+    { "name": "Зображення" }
+  ],
+  "paths": {
+    "/v1/catalog": {
+      "get": {
+        "tags": ["Каталог"],
+        "operationId": "getCatalog",
+        "summary": "Увесь каталог",
+        "description": "Спеціалізації, вмілості, проби й відзначення одним документом. Підходить застосунку, який тримає копію каталогу в себе: забирайте його періодично з `If-None-Match`, і коли нічого не змінилось, прийде порожня відповідь 304.",
+        "parameters": [{ "$ref": "#/components/parameters/krai" }, { "$ref": "#/components/parameters/ifNoneMatch" }],
+        "responses": {
+          "200": {
+            "description": "Каталог.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Catalog" } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" }
+        }
+      }
+    },
+    "/v1/categories": {
+      "get": {
+        "tags": ["Каталог"],
+        "operationId": "listCategories",
+        "summary": "Спеціалізації вмілостей",
+        "description": "Їхні `id` стоять у полі `categories` вмілостей і в параметрі `category`.",
+        "parameters": [{ "$ref": "#/components/parameters/ifNoneMatch" }],
+        "responses": {
+          "200": {
+            "description": "Спеціалізації.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" }
+        }
+      }
+    },
+    "/v1/badges": {
+      "get": {
+        "tags": ["Вмілості"],
+        "operationId": "listBadges",
+        "summary": "Список вмілостей",
+        "description": "Фільтри можна поєднувати. Без фільтрів приходять усі вмілості.",
+        "parameters": [
+          { "$ref": "#/components/parameters/krai" },
+          { "$ref": "#/components/parameters/ulad" },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Спеціалізація, `id` з `/v1/categories`.",
+            "schema": { "type": "string" },
+            "example": "mystetska"
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "description": "Край, з якого прийшла вмілість. На відміну від `krai`, не впливає на решту відповіді.",
+            "schema": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+            "example": "pl"
+          },
+          { "$ref": "#/components/parameters/status" },
+          {
+            "name": "family",
+            "in": "query",
+            "description": "Усі рівні однієї вмілості, наприклад I, II і III.",
+            "schema": { "type": "string" },
+            "example": "aktorstvo"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Пошук у назві, без урахування регістру.",
+            "schema": { "type": "string" },
+            "example": "альпін"
+          },
+          { "$ref": "#/components/parameters/ifNoneMatch" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Вмілості, що підходять під фільтри. Може бути порожнім списком.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Badge" } } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" }
+        }
+      }
+    },
+    "/v1/badges/{id}": {
+      "get": {
+        "tags": ["Вмілості"],
+        "operationId": "getBadge",
+        "summary": "Одна вмілість",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "Id вмілості.", "schema": { "type": "string" }, "example": "alpinistyka" },
+          { "$ref": "#/components/parameters/krai" },
+          { "$ref": "#/components/parameters/ifNoneMatch" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Вмілість.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Badge" } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/probes": {
+      "get": {
+        "tags": ["Проби"],
+        "operationId": "listProbes",
+        "summary": "Список проб",
+        "description": "Проби разом з розділами й точками.",
+        "parameters": [{ "$ref": "#/components/parameters/krai" }, { "$ref": "#/components/parameters/ulad" }, { "$ref": "#/components/parameters/ifNoneMatch" }],
+        "responses": {
+          "200": {
+            "description": "Проби.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Probe" } } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" }
+        }
+      }
+    },
+    "/v1/probes/{id}": {
+      "get": {
+        "tags": ["Проби"],
+        "operationId": "getProbe",
+        "summary": "Одна проба",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "Id проби.", "schema": { "type": "string" }, "example": "probe-1" },
+          { "$ref": "#/components/parameters/krai" },
+          { "$ref": "#/components/parameters/ifNoneMatch" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Проба.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Probe" } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/awards": {
+      "get": {
+        "tags": ["Відзначення"],
+        "operationId": "listAwards",
+        "summary": "Список відзначень",
+        "parameters": [
+          { "$ref": "#/components/parameters/krai" },
+          {
+            "name": "group",
+            "in": "query",
+            "description": "Група відзначень.",
+            "schema": { "type": "string", "examples": ["upyu-vidznachennia", "kv", "zb", "lsh", "shb"] },
+            "example": "upyu-vidznachennia"
+          },
+          { "$ref": "#/components/parameters/ulad" },
+          { "$ref": "#/components/parameters/ifNoneMatch" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Відзначення.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Award" } } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" }
+        }
+      }
+    },
+    "/v1/awards/{id}": {
+      "get": {
+        "tags": ["Відзначення"],
+        "operationId": "getAward",
+        "summary": "Одне відзначення",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "Id відзначення.", "schema": { "type": "string" }, "example": "upyu-vidznachennia-1" },
+          { "$ref": "#/components/parameters/krai" },
+          { "$ref": "#/components/parameters/ifNoneMatch" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Відзначення.",
+            "headers": { "ETag": { "$ref": "#/components/headers/ETag" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Award" } } }
+          },
+          "304": { "$ref": "#/components/responses/NotModified" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/images/{name}": {
+      "get": {
+        "tags": ["Зображення"],
+        "operationId": "getImage",
+        "summary": "Зображення",
+        "description": "Записи вже містять повні адреси зображень, збирати їх вручну не потрібно. Параметр `v` в адресі змінюється разом із вмістом файлу, тому таке зображення кешується без обмеження строку. SVG віддається із суворою CSP і не може виконати скрипт.",
+        "parameters": [
+          { "name": "name", "in": "path", "required": true, "description": "Назва файлу.", "schema": { "type": "string" }, "example": "upyu-vidznachennia-1.png" },
+          {
+            "name": "v",
+            "in": "query",
+            "description": "Версія файлу, перші 12 символів його SHA-256. З нею відповідь має `Cache-Control: immutable` на рік, без неї кешується на годину.",
+            "schema": { "type": "string" },
+            "example": "e24401a96d7c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Файл зображення.",
+            "content": {
+              "image/svg+xml": { "schema": { "type": "string", "format": "binary" } },
+              "image/png": { "schema": { "type": "string", "format": "binary" } },
+              "image/webp": { "schema": { "type": "string", "format": "binary" } },
+              "image/jpeg": { "schema": { "type": "string", "format": "binary" } }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "krai": {
+        "name": "krai",
+        "in": "query",
+        "description": "Лишити тільки записи цього краю. Без параметра приходять записи всіх країв. Невідомий або неправильний код діє так, ніби параметра немає.",
+        "schema": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+        "example": "cz"
+      },
+      "ulad": {
+        "name": "ulad",
+        "in": "query",
+        "description": "Улад: `upp` — пташата, `upn` — новацтво, `upyu` — юнацтво, `usp` — старші пластуни, `ups` — сеніори.",
+        "schema": { "type": "string", "enum": ["upp", "upn", "upyu", "usp", "ups"] },
+        "example": "upyu"
+      },
+      "status": {
+        "name": "status",
+        "in": "query",
+        "description": "`approved` — затверджена, `trial` — апробаційна, вимоги ще можуть змінитись.",
+        "schema": { "type": "string", "enum": ["approved", "trial"] }
+      },
+      "ifNoneMatch": {
+        "name": "If-None-Match",
+        "in": "header",
+        "description": "`ETag` з попередньої відповіді. Якщо дані не змінились, прийде 304 без тіла.",
+        "schema": { "type": "string" }
+      }
+    },
+    "headers": {
+      "ETag": {
+        "description": "Версія відповіді. Разом з `Cache-Control: public, max-age=60, stale-while-revalidate=600`: зміни в каталозі видно приблизно за хвилину.",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "NotModified": { "description": "Дані не змінились з того `ETag`, що прийшов в `If-None-Match`. Тіла немає." },
+      "NotFound": {
+        "description": "Такого запису немає, або його виведено з ужитку.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
+      }
+    },
+    "schemas": {
+      "Catalog": {
+        "type": "object",
+        "required": ["schemaVersion", "revision", "krai", "categories", "badges", "probes", "awards"],
+        "properties": {
+          "schemaVersion": { "type": "integer", "description": "Версія формату. Зараз 2.", "example": 2 },
+          "revision": { "type": "integer", "description": "Номер ревізії. Зростає з кожною зміною в каталозі.", "example": 41 },
+          "krai": { "type": ["string", "null"], "description": "Край із запиту або `null`.", "example": null },
+          "categories": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } },
+          "badges": { "type": "array", "items": { "$ref": "#/components/schemas/Badge" } },
+          "probes": { "type": "array", "items": { "$ref": "#/components/schemas/Probe" } },
+          "awards": { "type": "array", "items": { "$ref": "#/components/schemas/Award" } }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string", "example": "alpinizm-ta-skelelazinnia" },
+          "title": { "type": "string", "example": "Альпінізм та скелелазіння" }
+        }
+      },
+      "Badge": {
+        "type": "object",
+        "description": "Вмілість. Id не змінюється ніколи, за ним можна зберігати, хто її здобув.",
+        "required": ["id", "title", "categories", "ulady", "krai", "status", "images", "prerequisites", "requirements"],
+        "properties": {
+          "id": { "type": "string", "example": "alpinistyka" },
+          "title": { "type": "string", "example": "Альпіністика" },
+          "family": { "type": ["string", "null"], "description": "Спільний id для рівнів однієї вмілості.", "example": "aktorstvo" },
+          "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 5, "description": "Рівень: 1 — I, 2 — II і так далі.", "example": 3 },
+          "categories": { "type": "array", "items": { "type": "string" }, "description": "Id спеціалізацій.", "example": ["alpinizm-ta-skelelazinnia"] },
+          "ulady": { "type": "array", "items": { "type": "string", "enum": ["upp", "upn", "upyu", "usp", "ups"] }, "example": ["upyu"] },
+          "krai": { "type": "string", "description": "Край, з якого прийшла вмілість.", "example": "pl" },
+          "status": { "type": "string", "enum": ["approved", "trial"], "example": "approved" },
+          "images": { "$ref": "#/components/schemas/Images" },
+          "prerequisites": { "type": "array", "items": { "type": "string" }, "description": "Id вмілостей, які треба мати спершу.", "example": [] },
+          "requirements": { "type": "array", "items": { "$ref": "#/components/schemas/Requirement" } },
+          "instructorRequirements": { "type": ["string", "null"], "description": "Вимоги до інструктора, markdown." },
+          "author": { "type": ["string", "null"], "description": "Хто розробив вмілість." },
+          "updatedOn": { "type": ["string", "null"], "format": "date", "description": "Коли востаннє змінювався текст.", "example": "2026-10-13" }
+        }
+      },
+      "Requirement": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string", "description": "Номер пункту. Пункти, додані краєм, мають його префікс: `cz-1`.", "example": "1" },
+          "text": { "type": "string", "description": "Текст у markdown.", "example": "Здобуде вмілості Скелелазіння ІІ і Мандрівництво." }
+        }
+      },
+      "Images": {
+        "type": "object",
+        "required": ["color", "bw"],
+        "properties": {
+          "color": { "type": ["string", "null"], "format": "uri", "description": "Кольорове зображення.", "example": "https://catalog.rostyslav-mukha.dev/v1/images/alpinistyka_i_color.svg?v=b84363961c8d" },
+          "bw": { "type": ["string", "null"], "format": "uri", "description": "Чорно-біле: його показують, поки вмілість не здобута.", "example": null }
+        }
+      },
+      "Probe": {
+        "type": "object",
+        "required": ["id", "title", "ulad", "krai", "order", "status", "images", "sections", "points"],
+        "properties": {
+          "id": { "type": "string", "example": "probe-1" },
+          "title": { "type": "string", "example": "Перша проба (Скобине крило)" },
+          "ulad": { "type": "string", "example": "upyu" },
+          "krai": { "type": "string", "example": "ua" },
+          "order": { "type": "integer", "description": "Порядок показу.", "example": 1 },
+          "status": { "type": "string", "enum": ["approved", "trial"] },
+          "images": { "$ref": "#/components/schemas/Images" },
+          "sections": { "type": "array", "items": { "$ref": "#/components/schemas/ProbeSection" } },
+          "points": { "type": "array", "items": { "$ref": "#/components/schemas/ProbePoint" }, "description": "Точки поза розділами." }
+        }
+      },
+      "ProbeSection": {
+        "type": "object",
+        "required": ["id", "code", "title", "points"],
+        "properties": {
+          "id": { "type": "string", "example": "probe-1-section-a" },
+          "code": { "type": "string", "description": "Літера розділу.", "example": "А" },
+          "title": { "type": "string", "example": "Три головні обов’язки пластуна" },
+          "points": { "type": "array", "items": { "$ref": "#/components/schemas/ProbePoint" } }
+        }
+      },
+      "ProbePoint": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string", "description": "Унікальний серед усіх проб і не змінюється.", "example": "probe-1-section-a-point-1" },
+          "text": { "type": "string", "example": "Знає на пам’ять і пояснить Три Головні Обов’язки Пластуна." }
+        }
+      },
+      "Award": {
+        "type": "object",
+        "required": ["id", "group", "title", "krai", "status", "images", "requirements"],
+        "properties": {
+          "id": { "type": "string", "example": "upyu-vidznachennia-1" },
+          "group": { "type": "string", "example": "upyu-vidznachennia" },
+          "title": { "type": "string", "example": "Перше відзначення" },
+          "ulad": { "type": ["string", "null"], "example": "upyu" },
+          "krai": { "type": "string", "example": "ua" },
+          "level": { "type": ["integer", "null"], "example": 1 },
+          "status": { "type": "string", "enum": ["approved", "trial"] },
+          "images": { "$ref": "#/components/schemas/Images" },
+          "description": { "type": ["string", "null"], "description": "Опис, markdown." },
+          "requirements": { "type": "array", "items": { "$ref": "#/components/schemas/Requirement" } }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "example": "not_found" }
+        }
+      }
+    }
+  }
+}

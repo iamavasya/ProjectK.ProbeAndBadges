@@ -9,19 +9,7 @@
   <link rel="preload" href="/assets/fonts/manrope-var-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/brand.css">
   <script src="/theme.js"></script>
-  <style>
-    .docs { --page-width: 56rem; }
-    .docs h3 { font-size: 15px; margin: 18px 0 6px; }
-    .docs ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
-    .docs pre { margin: 10px 0 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; font-size: 12.5px; }
-    .docs pre + p, .docs .table + p, .docs ul + pre, .docs p + .table, .docs pre + .table { margin-top: 10px; }
-    .docs .table { overflow-x: auto; margin-top: 10px; }
-    .docs table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-    .docs th, .docs td { text-align: left; vertical-align: top; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); }
-    .docs th { font-weight: 700; color: var(--muted); font-size: 12.5px; }
-    .docs td:first-child { white-space: nowrap; }
-    .docs nav.toc { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
-  </style>
+  <link rel="stylesheet" href="/docs.css">
 </head>
 <body>
   <header class="toolbar">
@@ -36,147 +24,67 @@
     </nav>
   </header>
 
-  <main class="page docs">
-    <header class="page-head">
-      <h1>Документація</h1>
-      <p>Як читати каталог з іншого сайту чи застосунку і як краю додати свої вмілості.</p>
-    </header>
-
-    <nav class="tile toc" aria-label="Розділи">
-      <a href="#api">API</a>
-      <a href="#records">Записи</a>
-      <a href="#images">Зображення</a>
-      <a href="#contribute">Як додати свої вмілості</a>
-      <a href="#format">Формат catalog.json</a>
-      <a href="#overrides">Доповнення краю</a>
-    </nav>
-
-    <section class="tile" id="api">
-      <h2>API</h2>
-      <p>Усі запити нижче публічні: ключ не потрібен, CORS відкритий. Відповіді в JSON. API віддає лише те, що вже опубліковано. Виведені з ужитку записи й нотатки редакторів не потрапляють у відповідь.</p>
-      <div class="table">
-        <table>
-          <thead><tr><th>Запит</th><th>Що віддає</th></tr></thead>
-          <tbody>
-            <tr><td><code>GET /v1/catalog</code></td><td>Увесь каталог одним документом: <code>categories</code>, <code>badges</code>, <code>probes</code>, <code>awards</code>. Найзручніше для застосунку, який тримає каталог у себе.</td></tr>
-            <tr><td><code>GET /v1/categories</code></td><td>Спеціалізації вмілостей.</td></tr>
-            <tr><td><code>GET /v1/badges</code></td><td>Вмілості. Фільтри: <code>ulad</code>, <code>category</code>, <code>origin</code>, <code>status</code>, <code>family</code>, <code>q</code>.</td></tr>
-            <tr><td><code>GET /v1/badges/{id}</code></td><td>Одна вмілість.</td></tr>
-            <tr><td><code>GET /v1/probes</code></td><td>Проби з розділами й точками. Фільтр: <code>ulad</code>.</td></tr>
-            <tr><td><code>GET /v1/probes/{id}</code></td><td>Одна проба.</td></tr>
-            <tr><td><code>GET /v1/awards</code></td><td>Відзначення й відзнаки. Фільтри: <code>group</code>, <code>ulad</code>.</td></tr>
-            <tr><td><code>GET /v1/awards/{id}</code></td><td>Одне відзначення.</td></tr>
-            <tr><td><code>GET /v1/images/{name}</code></td><td>Зображення. Див. <a href="#images">нижче</a>.</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Параметри</h3>
+  <div class="docs-layout">
+    <details class="toc" open>
+      <summary>Зміст</summary>
+      <ul><li><a href="#intro" class="toc-group">Вступ</a></li></ul>
+      <div class="toc-title">Довідник API</div>
+      <ul id="toc-api"></ul>
+      <div class="toc-title">Для країв</div>
       <ul>
-        <li><code>krai</code> є в усіх запитах, крім зображень і спеціалізацій. Він лишає тільки записи цього краю, наприклад <code>?krai=cz</code>. Без нього приходять записи всіх країв.</li>
-        <li><code>ulad</code>: <code>upp</code>, <code>upn</code>, <code>upyu</code>, <code>usp</code> або <code>ups</code>.</li>
-        <li><code>category</code>: id спеціалізації з <code>/v1/categories</code>.</li>
-        <li><code>origin</code>: край, який затвердив вмілість. Те саме, що <code>krai</code>, але тільки для фільтра вмілостей.</li>
-        <li><code>status</code>: <code>approved</code> (затверджена) або <code>trial</code> (апробаційна).</li>
-        <li><code>family</code>: усі рівні однієї вмілості, наприклад I, II і III.</li>
-        <li><code>q</code>: пошук у назві.</li>
-        <li><code>group</code>: група відзначень, наприклад <code>upyu-vidznachennia</code>.</li>
+        <li><a href="#contribute">Як додати свої вмілості</a></li>
+        <li><a href="#format">Формат catalog.json</a></li>
+        <li><a href="#overrides">Доповнення краю</a></li>
       </ul>
-      <pre><code>GET /v1/badges?ulad=upyu&amp;category=mystetska
-GET /v1/badges?q=альпін
-GET /v1/catalog?krai=cz
-GET /v1/probes/probe-1</code></pre>
+    </details>
 
-      <h3>Кешування</h3>
-      <p>Відповіді мають <code>ETag</code> і <code>Cache-Control: max-age=60</code>. Зміни в каталозі стають видно приблизно за хвилину. Якщо застосунок забирає <code>/v1/catalog</code> регулярно, надсилайте <code>If-None-Match</code>: коли нічого не змінилося, прийде порожня відповідь <code>304</code>.</p>
-      <p>Невідомий id дає <code>404</code> з <code>{"error": "not_found"}</code>.</p>
-    </section>
+    <main class="docs-main">
+      <header class="page-head">
+        <h1>Документація</h1>
+        <p>Як читати каталог з іншого сайту чи застосунку і як краю додати свої вмілості.</p>
+      </header>
 
-    <section class="tile" id="records">
-      <h2>Записи</h2>
-      <p>Ідентифікатори вмілостей, проб, точок проби й відзначень не змінюються. За ними можна зберігати, хто що здобув.</p>
+      <section class="tile guide" id="intro">
+        <h2>Вступ</h2>
+        <p>API лише читає. Записи редагують через адмінку, див. <a href="#contribute">нижче</a>. Відповіді містять тільки опубліковане: виведених з ужитку записів і нотаток редакторів там немає. Id вмілостей, проб, точок проби й відзначень не змінюються, тож за ними можна зберігати, хто що здобув.</p>
+        <div class="facts">
+          <div><strong>Адреса</strong><code id="base-url">/v1</code></div>
+          <div><strong>Автентифікація</strong>не потрібна, CORS відкритий</div>
+          <div><strong>Формат</strong>JSON, UTF-8</div>
+          <div><strong>Кешування</strong><code>ETag</code>, зміни видно за ~1 хв</div>
+          <div><strong>Специфікація</strong><a href="/openapi.json">openapi.json</a> для Postman чи Swagger</div>
+        </div>
+      </section>
 
-      <h3>Вмілість</h3>
-<pre><code>{
-  "id": "alpinistyka",
-  "title": "Альпіністика",
-  "level": 3,
-  "categories": ["alpinizm-ta-skelelazinnia"],
-  "ulady": ["upyu"],
-  "krai": "pl",
-  "status": "approved",
-  "images": {
-    "color": "https://…/v1/images/alpinistyka_i_color.svg?v=b84363961c8d",
-    "bw": null
-  },
-  "prerequisites": [],
-  "requirements": [
-    { "id": "1", "text": "Здобуде вмілості Скелелазіння ІІ і Мандрівництво." }
-  ],
-  "instructorRequirements": "…",
-  "author": "…"
-}</code></pre>
-      <p>Поля <code>family</code>, <code>level</code>, <code>instructorRequirements</code>, <code>author</code> і <code>updatedOn</code> є не в усіх вмілостей. Тексти вимог написані в markdown. <code>prerequisites</code> містить id вмілостей, які треба мати спершу.</p>
+      <div id="reference"><p class="muted">Завантажую опис API…</p></div>
 
-      <h3>Проба</h3>
-<pre><code>{
-  "id": "probe-1",
-  "title": "Перша проба (Скобине крило)",
-  "ulad": "upyu",
-  "order": 1,
-  "sections": [
-    {
-      "id": "probe-1-section-a",
-      "code": "А",
-      "title": "Три головні обов’язки пластуна",
-      "points": [
-        { "id": "probe-1-section-a-point-1", "text": "Знає на пам’ять і пояснить Три Головні Обов’язки Пластуна." }
-      ]
-    }
-  ],
-  "points": []
-}</code></pre>
-      <p><code>points</code> на верхньому рівні містить точки, що не входять у жоден розділ. <code>order</code> задає порядок показу.</p>
-
-      <h3>Відзначення</h3>
-<pre><code>{
-  "id": "upyu-vidznachennia-1",
-  "group": "upyu-vidznachennia",
-  "title": "Перше відзначення",
-  "ulad": "upyu",
-  "level": 1,
-  "images": { "color": "https://…", "bw": "https://…" },
-  "requirements": []
-}</code></pre>
-      <p>Відзнаки КВ, ЗБ, ЛШ, ШБ та інші будуть у тому самому списку, кожна зі своєю групою в <code>group</code>.</p>
-    </section>
-
-    <section class="tile" id="images">
-      <h2>Зображення</h2>
-      <p>У записах зображення вже подані повними адресами. <code>color</code> — кольорове, <code>bw</code> — чорно-біле, яке можна показувати, поки вмілість не здобута. Будь-яке з них може бути <code>null</code>.</p>
-      <p>Параметр <code>?v=</code> в адресі змінюється разом із вмістом файлу, тож браузер і CDN тримають такі зображення в кеші без обмеження строку. Адресу з <code>?v=</code> краще використовувати як є і не збирати вручну.</p>
-    </section>
-
-    <section class="tile" id="contribute">
-      <h2>Як додати свої вмілості</h2>
-      <p>Зміни вносять редактори країв через <a href="/admin/">адмінку</a>. Вхід там за кодом, який приходить на пошту. Права видає власник каталогу.</p>
-      <ul>
-        <li><strong>Редактор краю</strong> змінює записи свого краю, додає спеціалізації й погоджує подання від свого краю.</li>
-        <li><strong>Дописувач</strong> лише надсилає подання. Опублікує його редактор краю.</li>
-      </ul>
-      <p>Одну вмілість простіше додати прямо формою в адмінці. Якщо їх багато або в них є зображення, підготуйте zip:</p>
-      <pre><code>prague.zip
+      <section class="tile guide" id="contribute">
+        <h2>Як додати свої вмілості</h2>
+        <p>Зміни вносять в <a href="/admin/">адмінці</a>. Вхід за кодом, який приходить на пошту. Права видає власник каталогу.</p>
+        <ul>
+          <li><strong>Редактор краю</strong> змінює записи свого краю, додає спеціалізації й погоджує подання від свого краю.</li>
+          <li><strong>Дописувач</strong> лише надсилає подання. Опублікує його редактор краю.</li>
+        </ul>
+        <p>Одну вмілість простіше додати формою в адмінці. Якщо їх багато або в них є зображення, підготуйте zip. Надсилати весь каталог не потрібно, лише те, що край додає або змінює.</p>
+        <pre><code>prague.zip
 ├── catalog.json
 └── images/
     ├── cz-istoriia-ukraintsiv-u-chekhii-i.svg
     └── …</code></pre>
-      <p>В адмінці натисніть «Завантажити zip». Спершу ви побачите звіт: що буде додано чи змінено, які є помилки і яких зображень бракує. Нічого не змінюється, поки ви не підтвердите.</p>
-      <p>Надсилати весь каталог не потрібно, лише те, що край додає або змінює.</p>
-    </section>
+        <p>В адмінці натисніть «Завантажити zip». Спершу ви побачите звіт: що буде додано чи змінено, які є помилки і яких зображень бракує. Нічого не змінюється, поки ви не підтвердите.</p>
+        <h3>Зображення</h3>
+        <ul>
+          <li><code>.svg</code>, <code>.png</code>, <code>.webp</code> або <code>.jpg</code>, до 2 МБ, назва латиницею без пробілів.</li>
+          <li>SVG без скриптів і посилань на зовнішні файли. Експорт з Illustrator варто пропустити через <a href="https://jakearchibald.github.io/svgomg/">SVGOMG</a>, це ще й зменшить файл у рази.</li>
+        </ul>
+        <h3>Перевірка без надсилання</h3>
+        <p>Той самий звіт можна отримати локально з <a href="https://github.com/iamavasya/ProjectK.ProbeAndBadges">репозиторію</a>:</p>
+        <pre><code>dotnet run --project tools/ProjectK.Catalog.Cli -- validate prague.zip --against catalog</code></pre>
+      </section>
 
-    <section class="tile" id="format">
-      <h2>Формат catalog.json</h2>
-<pre><code>{
+      <section class="tile guide" id="format">
+        <h2>Формат catalog.json</h2>
+        <pre><code>{
   "schemaVersion": 2,
   "source": { "krai": "cz", "name": "Пласт у Чехії, станиця Прага", "contact": "…" },
   "badges": [
@@ -190,77 +98,136 @@ GET /v1/probes/probe-1</code></pre>
       "status": "trial",
       "images": { "color": "cz-istoriia-ukraintsiv-u-chekhii-i.svg" },
       "requirements": [
-        { "id": "1", "text": "Розповість про українську еміграцію до Праги в 1920-х роках." },
-        { "id": "2", "text": "Відвідає одне з місць, повʼязаних з українцями в Празі…" }
+        { "id": "1", "text": "Розповість про українську еміграцію до Праги в 1920-х роках." }
       ],
-      "instructorRequirements": "Інструктор має цю вмілість або фахову освіту з історії.",
       "author": "ст.пл. Ім'я Прізвище",
       "updatedOn": "2026-10-13"
     }
   ]
 }</code></pre>
+        <p><code>source.krai</code> — код краю, 2–3 латинські літери: <code>ua</code>, <code>pl</code>, <code>cz</code>, <code>de</code>, <code>us</code>, <code>ca</code>. Поле з помилкою в назві, наприклад <code>requirments</code>, не пропускається мовчки, а дає помилку перевірки.</p>
+        <h3>Поля вмілості</h3>
+        <ul class="fields">
+          <li class="field-row">
+            <div class="field-name"><code class="name">id</code><span class="req">обов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Латиницею, малими літерами, через дефіс. Новим записам край дає префікс свого коду: <code>cz-</code>. Після публікації не змінюється.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">title</code><span class="req">обов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Назва з рівнем: «Історія українців у Чехії I».</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">requirements</code><span class="req">обов’язкове</span></div>
+            <div class="field-body"><div class="type">Requirement[]</div><p>Пункти вимог: <code>{ "id": "1", "text": "…" }</code>. Текст у markdown: <code>**жирний**</code>, <code>*курсив*</code>, підпункти рядками з <code>- </code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">categories</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Id спеціалізацій з <code>/v1/categories</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">ulady</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Для яких уладів.</p><div class="values">Значення: <code>upp</code> <code>upn</code> <code>upyu</code> <code>usp</code> <code>ups</code></div></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">family</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Спільний id для рівнів I, II, III однієї вмілості.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">level</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">integer</div><p>Номер рівня, 1–5.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">images</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">object</div><p><code>color</code> і <code>bw</code>: назви файлів з теки <code>images/</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">prerequisites</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Id вмілостей, які треба мати спершу.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">instructorRequirements</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Вимоги до інструктора.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">author</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Хто розробив.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">updatedOn</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">date</div><p>Коли востаннє змінювався текст, <code>рррр-мм-дд</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">status</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Без статусу запис вважається затвердженим. Нові вмілості краю зазвичай починають з <code>trial</code>.</p><div class="values">Значення: <code>approved</code> <code>trial</code> <code>retired</code></div></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">krai</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Якщо не вказано, береться з <code>source.krai</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">notes</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Нотатки для редакторів. У публічному API їх немає.</p></div>
+          </li>
+        </ul>
+        <p>Проби (<code>probes</code>) і відзначення (<code>awards</code>) мають ті самі поля, що й у схемах <a href="#schema-Probe">Probe</a> та <a href="#schema-Award">Award</a>, тільки зображення вказуються назвами файлів, а не адресами. Id точки проби має бути унікальним серед усіх проб.</p>
+      </section>
 
-      <h3>Загальні правила</h3>
-      <ul>
-        <li><code>id</code> пишеться латиницею, малими літерами, через дефіс. Новим записам край дає префікс свого коду, наприклад <code>cz-</code>. Після публікації id не змінюють.</li>
-        <li>Код краю — 2–3 латинські літери: <code>ua</code>, <code>pl</code>, <code>cz</code>, <code>de</code>, <code>us</code>, <code>ca</code>. Його вказують один раз у <code>source.krai</code>.</li>
-        <li>Нові вмілості краю зазвичай мають статус <code>trial</code>. Без статусу запис вважається затвердженим.</li>
-        <li>Тексти пишуться в markdown: <code>**жирний**</code>, <code>*курсив*</code>, підпункти окремими рядками з <code>- </code>.</li>
-        <li>Зображення: <code>.svg</code>, <code>.png</code>, <code>.webp</code> або <code>.jpg</code>, до 2 МБ, назва латиницею без пробілів. SVG не може містити скриптів чи посилань на зовнішні файли. Експорт з Illustrator варто пропустити через <a href="https://jakearchibald.github.io/svgomg/">SVGOMG</a>, це ще й зменшить файл у рази.</li>
-        <li>Поле з помилкою в назві, наприклад <code>requirments</code>, не пропускається мовчки, а дає помилку перевірки.</li>
-      </ul>
-
-      <h3>Поля вмілості</h3>
-      <div class="table">
-        <table>
-          <thead><tr><th>Поле</th><th>Що це</th></tr></thead>
-          <tbody>
-            <tr><td><code>id</code>, <code>title</code></td><td>Обов'язкові.</td></tr>
-            <tr><td><code>requirements</code></td><td>Обов'язкове. Пункти вимог: <code>{ "id": "1", "text": "…" }</code>, де id — номер пункту.</td></tr>
-            <tr><td><code>categories</code></td><td>Id спеціалізацій з <code>/v1/categories</code>.</td></tr>
-            <tr><td><code>ulady</code></td><td>Для яких уладів.</td></tr>
-            <tr><td><code>family</code>, <code>level</code></td><td>Спільний id і номер рівня (1–5) для вмілостей з рівнями I, II, III.</td></tr>
-            <tr><td><code>images</code></td><td><code>color</code> і <code>bw</code>: назви файлів з теки <code>images/</code>.</td></tr>
-            <tr><td><code>prerequisites</code></td><td>Id вмілостей, які треба мати спершу.</td></tr>
-            <tr><td><code>instructorRequirements</code></td><td>Вимоги до інструктора.</td></tr>
-            <tr><td><code>author</code>, <code>updatedOn</code></td><td>Хто розробив і коли востаннє змінювався текст (<code>рррр-мм-дд</code>).</td></tr>
-            <tr><td><code>status</code></td><td><code>approved</code>, <code>trial</code> або <code>retired</code>.</td></tr>
-            <tr><td><code>krai</code></td><td>Якщо не вказано, береться з <code>source.krai</code>.</td></tr>
-            <tr><td><code>notes</code></td><td>Нотатки для редакторів. У публічному API їх немає.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>Проби (<code>probes</code>) і відзначення (<code>awards</code>) мають ті самі поля, що й у <a href="#records">відповідях API</a>, тільки зображення вказуються назвами файлів, а не адресами. Id точки проби має бути унікальним серед усіх проб.</p>
-
-      <h3>Перевірка без надсилання</h3>
-      <p>Той самий звіт можна отримати локально з <a href="https://github.com/iamavasya/ProjectK.ProbeAndBadges">репозиторію</a>:</p>
-      <pre><code>dotnet run --project tools/ProjectK.Catalog.Cli -- validate prague.zip --against catalog</code></pre>
-    </section>
-
-    <section class="tile" id="overrides">
-      <h2>Доповнення краю</h2>
-      <p>Буває, що край хоче додати вимогу до чужої вмілості чи ще одну точку до проби. Тоді запис не копіюють, а надсилають доповнення в <code>overrides</code>:</p>
-<pre><code>"overrides": [
+      <section class="tile guide" id="overrides">
+        <h2>Доповнення краю</h2>
+        <p>Коли край хоче додати вимогу до чужої вмілості чи ще одну точку до проби, запис не копіюють, а надсилають доповнення в <code>overrides</code>. Доповнення вже приймаються й перевіряються, але API їх поки не показує.</p>
+        <pre><code>"overrides": [
   {
     "krai": "cz",
     "target": "badge:aktorstvo-i",
-    "addRequirements": [
-      { "id": "cz-1", "text": "Візьме участь у виставі українського театру в Празі." }
-    ]
-  },
-  {
-    "krai": "cz",
-    "target": "probe:probe-1",
-    "addPoints": [{ "section": "А", "id": "cz-probe-1-a-1", "text": "Знає історію Пласту в Чехії." }]
+    "addRequirements": [{ "id": "cz-1", "text": "Візьме участь у виставі українського театру в Празі." }]
   }
 ]</code></pre>
-      <p>Ще можна прибрати пункти (<code>removeRequirements</code>, <code>removePoints</code>), дати запису іншу назву (<code>title</code>) або сховати його для краю (<code>hidden: true</code>). Id нових пунктів мають префікс краю.</p>
-      <p>Доповнення вже приймаються й перевіряються, але API їх поки не показує.</p>
-    </section>
-  </main>
+        <h3>Поля доповнення</h3>
+        <ul class="fields">
+          <li class="field-row">
+            <div class="field-name"><code class="name">krai</code><span class="req">обов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Свій код краю.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">target</code><span class="req">обов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Що доповнюємо: <code>badge:&lt;id&gt;</code>, <code>probe:&lt;id&gt;</code> або <code>award:&lt;id&gt;</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">addRequirements</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">Requirement[]</div><p>Нові пункти вимог. Id з префіксом краю: <code>cz-1</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">removeRequirements</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Id пунктів, які для краю не діють.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">addPoints</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">object[]</div><p>Нові точки проби: <code>{ "section": "А", "id": "cz-probe-1-a-1", "text": "…" }</code>.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">removePoints</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string[]</div><p>Id точок проби, які для краю не діють.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">title</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Інша назва для краю.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">hidden</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">boolean</div><p><code>true</code> ховає запис для краю.</p></div>
+          </li>
+          <li class="field-row">
+            <div class="field-name"><code class="name">note</code><span class="loc">необов’язкове</span></div>
+            <div class="field-body"><div class="type">string</div><p>Пояснення для редакторів.</p></div>
+          </li>
+        </ul>
+      </section>
+    </main>
+  </div>
 
   <footer class="site">
     <a href="/">До каталогу</a>
   </footer>
+  <script src="/docs.js"></script>
 </body>
 </html>
