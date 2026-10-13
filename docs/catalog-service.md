@@ -146,9 +146,12 @@ npm run deploy
 
 Локально:
 
+Усі команди виконуються з теки `worker`.
+
 ```bash
 cd worker
 printf 'ENVIRONMENT=dev\nDEV_ACCESS_EMAIL=you@example.com\n' > .dev.vars
+# PowerShell: Set-Content .dev.vars "ENVIRONMENT=dev`nDEV_ACCESS_EMAIL=you@example.com" -Encoding ascii
 npm run db:migrate:local && node scripts/seed.mjs --local
 npm run dev                               # http://localhost:8787/admin/
 npm test                                  # Vitest на справжніх D1/R2 у Miniflare

@@ -10,11 +10,15 @@ import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const target = process.argv.includes("--remote") ? "--remote" : "--local";
-const root = new URL("../../catalog/", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../../catalog/", import.meta.url));
+// Wrangler's own entry point run with this Node: no npx, so it works the same on Windows.
+const wranglerBin = join(dirname(createRequire(import.meta.url).resolve("wrangler/package.json")), "bin", "wrangler.js");
 const bucket = "projectk-catalog";
 const actor = "seed";
 const now = new Date().toISOString();
@@ -51,7 +55,7 @@ sql.push("UPDATE meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'revisi
 
 const file = join(mkdtempSync(join(tmpdir(), "catalog-seed-")), "seed.sql");
 writeFileSync(file, sql.join("\n"));
-const wrangler = (args) => execFileSync("npx", ["wrangler", ...args], { stdio: "inherit" });
+const wrangler = (args) => execFileSync(process.execPath, [wranglerBin, ...args], { stdio: "inherit" });
 
 console.log(`Uploading ${images.length} images to R2 (${target.slice(2)})…`);
 if (target === "--local") {
@@ -72,7 +76,7 @@ if (target === "--local") {
     Array.from({ length: 8 }, async () => {
       for (let name = queue.shift(); name; name = queue.shift()) {
         const type = types[name.split(".").pop().toLowerCase()];
-        await run("npx", ["wrangler", "r2", "object", "put", `${bucket}/images/${name}`, "--file", join(root, "images", name), "--content-type", type, "--remote"]);
+        await run(process.execPath, [wranglerBin, "r2", "object", "put", `${bucket}/images/${name}`, "--file", join(root, "images", name), "--content-type", type, "--remote"]);
         if (++done % 25 === 0) console.log(`  ${done}/${images.length}`);
       }
     }),
