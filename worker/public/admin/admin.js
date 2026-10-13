@@ -258,7 +258,7 @@ function renderEdit(target, kind, raw) {
   const isBadge = kind === "badge";
 
   target.innerHTML = `<div class="form card">
-    ${isBadge ? badgeFormHtml(item, !raw) : `<p class="muted">Редагування як JSON. Поля описані в <code>docs/catalog-format.md</code>.</p>`}
+    ${isBadge ? badgeFormHtml(item, !raw) : `<p class="muted">Редагування як JSON. Поля описані в <a href="/docs#format" target="_blank">документації</a>.</p>`}
     <details ${isBadge ? "" : "open"}><summary>JSON запису</summary><textarea class="json" id="raw-json" rows="18"></textarea></details>
     <div class="row">
       <button id="save">${raw ? "Зберегти" : "Створити"}</button>

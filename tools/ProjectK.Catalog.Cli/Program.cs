@@ -10,7 +10,7 @@ const string Usage = """
       convert-v1 --badges <badges.json> --images <dir> --probes <probes.seed.json>
                  --awards-images <dir> --out <dir>
           Convert the parser's output and the library seeds into a v2 catalog folder.
-          Writes migration-report.md next to catalog.json.
+          Prints what to check by hand and which parser images went unused.
 
       validate <dir|zip> [--against <dir>]
           Check a catalog, or a krai contribution against the main catalog, offline.
@@ -79,8 +79,9 @@ static int ConvertV1(Options o)
     var report = package.Validate();
     var output = o.Required("out");
     package.WriteFolder(output);
-    File.WriteAllText(Path.Combine(output, "migration-report.md"), MigrationReport.Build(package, converter.Report, report, unused));
 
+    foreach (var note in converter.Report) Console.WriteLine($"check: {note}");
+    foreach (var name in unused) Console.WriteLine($"unused image: {name}");
     Console.WriteLine($"Wrote {output}: {bundle.Badges.Count} badges, {bundle.Probes.Count} probes, {bundle.Awards.Count} awards, {images.Count} images.");
     return PrintReport(report);
 }

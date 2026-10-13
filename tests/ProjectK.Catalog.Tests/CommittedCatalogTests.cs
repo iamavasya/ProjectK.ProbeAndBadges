@@ -63,7 +63,7 @@ public class CommittedCatalogTests
     [Fact]
     public void KraiContributionExample_IsValidAgainstTheCatalog()
     {
-        var example = CatalogPackage.ReadFolder(Path.Combine(RepoRoot, "docs/examples/krai-contribution"));
+        var example = CatalogPackage.ReadFolder(Path.Combine(RepoRoot, "samples/krai-contribution"));
 
         var report = example.Validate(Catalog.Bundle, Catalog.ImageNames);
 

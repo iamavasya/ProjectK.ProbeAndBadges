@@ -69,3 +69,5 @@ x86/
 
 # Publish Web Output
 *.[Pp]ublish.xml
+# Local notes (deploy steps etc.), not part of the repo
+/docs/

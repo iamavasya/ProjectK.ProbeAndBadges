@@ -1,29 +1,25 @@
 # ProjectK.ProbeAndBadges
 
-Read-only .NET library for loading and querying Plast badges data, and the catalog it is
-moving to:
+Вмілості, проби й відзначення Пласту для Лілейки: .NET-бібліотека, каталог даних і сервіс, який цей
+каталог роздає.
 
-- `catalog/` — badges, probes and УПЮ awards in format v2, with optimized images
-- `worker/` — the catalog service on Cloudflare Workers (public cached API, admin page, krai
-  editors, zip submissions); see [docs/catalog-service.md](docs/catalog-service.md)
-- `tools/ProjectK.Catalog.Cli` — converts the parser's output to v2 and validates bundles offline
-- [docs/catalog-format.md](docs/catalog-format.md) — the format a krai fills in to add its own
-  badges and requirements
+Публічний каталог і документація API: https://catalog.rostyslav-mukha.dev/docs
 
-It provides:
-- a stable catalog API over badges metadata and entities
-- a separate probes catalog API with probe sections and grouped responses
-- flexible data source loading (embedded, file, zip, URL, latest release)
-- optional runtime extraction of badge images from release zip
-- host-friendly dependency injection registration
+## Що де лежить
 
-## Target framework
+| Тека | Що там |
+|---|---|
+| `src/ProjectK.ProbeAndBadges*` | бібліотека, яку підключає Лілейка (NuGet у GitHub Packages) |
+| `src/ProjectK.Catalog` | модель каталогу v2 і перевірка записів |
+| `catalog/` | сам каталог: `catalog.json` і зображення |
+| `worker/` | сервіс каталогу на Cloudflare Workers: API, публічна сторінка, адмінка |
+| `tools/ProjectK.Catalog.Cli` | конвертація зі старого формату, перевірка й пакування zip |
+| `samples/` | демо для бібліотеки і приклад zip від краю |
+| `tests/` | тести бібліотеки й каталогу |
 
-- .NET 10
+## Бібліотека
 
-## Quick start
-
-Register services in your host application:
+Потрібен .NET 10.
 
 ```csharp
 using ProjectK.ProbeAndBadges.DependencyInjection;
@@ -31,105 +27,80 @@ using ProjectK.ProbeAndBadges.DependencyInjection;
 builder.Services.AddProbeAndBadgesApi();
 ```
 
-Resolve and use the catalog:
-
 ```csharp
 using ProjectK.ProbeAndBadges.Abstractions;
 
-var catalog = app.Services.GetRequiredService<IBadgesCatalog>();
+var badges = app.Services.GetRequiredService<IBadgesCatalog>();
+var one = badges.GetById("avtoznavstvo-i");
+var found = badges.Query(new BadgeQuery(Text: "актор", Country: "Україна"));
 
-var all = catalog.GetAll();
-var byId = catalog.GetById("avtoznavstvo-i");
-var filtered = catalog.Query(new BadgeQuery(Text: "актор", Country: "Україна"));
-
-var probesCatalog = app.Services.GetRequiredService<IProbesCatalog>();
-var probes = probesCatalog.GetAll();
-var probe1Points = probesCatalog.GetPointsByProbeId("probe-1");
-var probe1Sections = probesCatalog.GetSectionsByProbeId("probe-1");
-var sectionPoints = probesCatalog.GetSectionPointsByProbeId("probe-1", "А");
+var probes = app.Services.GetRequiredService<IProbesCatalog>();
+var sections = probes.GetSectionsByProbeId("probe-1");
 ```
 
-Probes seed currently contains 3 probes; points are available for the first two probes.
+Звідки брати дані, задає `options.DataSource`:
 
-## Probes API quick reference
+- `Auto` бере останній реліз PlastBadgesParser, а якщо не вдалося, то вбудований seed;
+- `EmbeddedSeed` бере вбудований seed;
+- `JsonFile`, `ReleaseDataZip` і `ReleaseDataZipUrl` беруть файл, zip або zip за адресою.
 
-The demo host exposes grouped probes routes that are convenient for frontend rendering:
+Якщо ввімкнено `EnableAssetsExtraction`, зображення з zip розпаковуються на диск. Шлях до них дає
+`IBadgesAssetsStore.AssetsDirectoryPath`, і хост може віддавати їх як статичні файли.
 
-- `GET /api/probes`
-- `GET /api/probes/{probeId}/points`
-- `GET /api/probes/{probeId}/sections`
-- `GET /api/probes/{probeId}/sections/{sectionKey}/points` where `sectionKey` can be section code (`А`, `Б`, `В`, ...) or section id
-- `GET /api/probes/{probeId}/grouped` (probe + sections + nested points in one payload)
+Демо:
 
-Grouped frontend demo page:
-
-- `GET /probes.html`
-
-## Common configuration
-
-Override only what you need:
-
-```csharp
-using ProjectK.ProbeAndBadges;
-using ProjectK.ProbeAndBadges.DependencyInjection;
-
-builder.Services.AddProbeAndBadgesApi(options =>
-{
-    options.DataSource = BadgesDataSource.Auto;
-    options.EnableLatestReleaseEtagCache = true;
-    options.EnableLocalReleaseZipCache = true;
-    options.VerifyReleaseZipChecksum = true;
-
-    options.EnableAssetsExtraction = true;
-    options.MissingImagesPolicy = AssetsMissingImagesPolicy.Warn;
-});
+```bash
+dotnet run --project samples/ProjectK.ProbeAndBadges.AspNetDemo
+dotnet run --project samples/ProjectK.ProbeAndBadges.ConsoleDemo
 ```
 
-## Data source modes
+Пакет публікується з тегу `v*`, див. `.github/workflows/publish-package.yml`.
 
-- Auto: resolves latest release asset, with optional fallback to embedded seed
-- EmbeddedSeed: loads bundled seed dataset
-- JsonFile: loads badges JSON from local file path
-- ReleaseDataZip: loads badges JSON entry from local zip file
-- ReleaseDataZipUrl: downloads zip from URL and reads badges JSON entry
+## Сервіс каталогу
 
-## Runtime assets
+TypeScript, Hono, D1 для записів, R2 для зображень, Cloudflare Access для входу в адмінку.
 
-When assets extraction is enabled and zip source path is available, the library extracts images to a local snapshot directory and exposes state via IBadgesAssetsStore.
-
-Typical host mapping to public path:
-
-```csharp
-using Microsoft.Extensions.FileProviders;
-using ProjectK.ProbeAndBadges.Abstractions;
-
-var assetsStore = app.Services.GetRequiredService<IBadgesAssetsStore>();
-if (assetsStore.HasAssets && !string.IsNullOrWhiteSpace(assetsStore.AssetsDirectoryPath))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(assetsStore.AssetsDirectoryPath),
-        RequestPath = "/badges_images"
-    });
-}
+```bash
+cd worker
+npm install
+printf 'ENVIRONMENT=dev\nDEV_ACCESS_EMAIL=you@example.com\n' > .dev.vars
+npm run db:migrate:local
+node scripts/seed.mjs --local
+npm run dev        # http://localhost:8787, адмінка на /admin/
+npm test
 ```
 
-## Samples
+У PowerShell `.dev.vars` створюється так:
+`Set-Content .dev.vars "ENVIRONMENT=dev`nDEV_ACCESS_EMAIL=you@example.com" -Encoding ascii`.
 
-Run ASP.NET end-to-end demo:
+З `ENVIRONMENT=dev` Worker не перевіряє Access і вважає тебе користувачем з `DEV_ACCESS_EMAIL`. Щоб
+мати всі права, впиши ту саму адресу в `OWNER_EMAILS` у `wrangler.jsonc`.
 
-```powershell
-dotnet run --project samples/ProjectK.ProbeAndBadges.AspNetDemo/ProjectK.ProbeAndBadges.AspNetDemo.csproj
+`seed.mjs` заливає `catalog/` в базу і бакет. Він потрібен один раз на порожній базі, далі все
+змінюється через адмінку.
+
+## Каталог і CLI
+
+`catalog/` збирається зі старого формату парсера:
+
+```bash
+scripts/convert-v1.sh ../PlastBadgesParser
 ```
 
-Run console demo:
+Перевірити zip від краю перед завантаженням:
 
-```powershell
-dotnet run --project samples/ProjectK.ProbeAndBadges.ConsoleDemo/ProjectK.ProbeAndBadges.ConsoleDemo.csproj
+```bash
+dotnet run --project tools/ProjectK.Catalog.Cli -- validate prague.zip --against catalog
 ```
 
-## Documentation
+Сервіс проганяє ті самі перевірки при кожному записі. Правила однакові в C# (`src/ProjectK.Catalog`)
+і в TypeScript (`worker/src/validate.ts`). Якщо міняєш одне, міняй і друге.
 
-- Public contract: docs/public-api.md
-- Runtime assets flow: docs/assets-runtime.md
-- Host integration guide: docs/host-integration.md
+Id вмілостей і точок проби не змінюються ніколи: за ними Лілейка зберігає, хто що здобув.
+
+## Тести
+
+```bash
+dotnet test ProjectK.ProbeAndBadges.slnx
+cd worker && npm run typecheck && npm test
+```
