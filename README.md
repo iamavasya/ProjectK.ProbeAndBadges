@@ -1,6 +1,14 @@
 # ProjectK.ProbeAndBadges
 
-Read-only .NET library for loading and querying Plast badges data.
+Read-only .NET library for loading and querying Plast badges data, and the catalog it is
+moving to:
+
+- `catalog/` — badges, probes and УПЮ awards in format v2, with optimized images
+- `worker/` — the catalog service on Cloudflare Workers (public cached API, admin page, krai
+  editors, zip submissions); see [docs/catalog-service.md](docs/catalog-service.md)
+- `tools/ProjectK.Catalog.Cli` — converts the parser's output to v2 and validates bundles offline
+- [docs/catalog-format.md](docs/catalog-format.md) — the format a krai fills in to add its own
+  badges and requirements
 
 It provides:
 - a stable catalog API over badges metadata and entities

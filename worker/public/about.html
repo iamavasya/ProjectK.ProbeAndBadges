@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Що це · Каталог · Лілейка</title>
+  <meta name="description" content="Що таке каталог вмілостей, проб і відзначень Лілейки і як ним користуватися.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/manrope-var-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/brand.css">
+  <script src="/theme.js"></script>
+  <style>
+    .about { --page-width: 52rem; }
+    .about ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+    .about pre { margin: 10px 0 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; font-size: 12.5px; }
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <a class="lockup" href="/" aria-label="Лілейка, каталог">
+      <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(45 50 50)"><path d="M50 44 C54 33 62 28 71 33 C79 38 80 48 73 53 C68 56 62 55 60 51"/><path d="M50 44 C46 33 38 28 29 33 C21 38 20 48 27 53 C32 56 38 55 40 51"/><path d="M33 60 H67"/><path d="M50 88 C46 80 46 71 50 65 C54 71 54 80 50 88 Z"/><path class="mark-center" d="M50 7 C45 24 45 43 50 57 C55 43 55 24 50 7 Z"/></g></svg><span class="wordmark">Лілейка</span><span class="sub">каталог</span>
+    </a>
+    <nav>
+      <a class="navlink" href="/">Каталог</a>
+      <a class="navlink" href="/about" aria-current="page">Що це</a>
+      <button class="btn btn-text" data-theme-toggle type="button">Темна тема</button>
+    </nav>
+  </header>
+
+  <main class="page about">
+    <header class="page-head">
+      <h1>Що це</h1>
+      <p>Каталог вмілостей, проб і відзначень Пласту для всіх уладів і країв.</p>
+    </header>
+
+    <section class="tile">
+      <h2>Навіщо</h2>
+      <p>Тут в одному місці зібрані вимоги й зображення вмілостей, точки проб і відзначення. З цього каталогу їх бере Лілейка, і так само їх може брати будь-який інший сайт чи застосунок.</p>
+      <p>Каталог можна переглядати без входу. Здобуте кожним юнаком тут не зберігається, воно лишається в Лілейці його куреня.</p>
+    </section>
+
+    <section class="tile">
+      <h2>Що тут є</h2>
+      <ul>
+        <li><strong>Вмілості</strong> з вимогами, рівнями, спеціалізаціями й авторами.</li>
+        <li><strong>Проби</strong> з розділами й точками.</li>
+        <li><strong>Відзначення</strong> УПЮ. Згодом тут будуть КВ, Золота Булава, ЛШ, ШБ та інші відзнаки.</li>
+      </ul>
+    </section>
+
+    <section class="tile">
+      <h2>Краї</h2>
+      <p>У кожного запису вказано край, з якого він прийшов. Обери край у фільтрах, і каталог покаже лише його записи. Без вибору видно записи всіх країв.</p>
+      <p>Каталог не вирішує, які вмілості діють в інших краях. Це вирішують самі краї.</p>
+    </section>
+
+    <section class="tile">
+      <h2>Статуси</h2>
+      <ul>
+        <li><strong>Затверджена</strong>: так її позначено в джерелі.</li>
+        <li><strong>Апробаційна</strong>: її ще випробовують, тож вимоги можуть змінитися.</li>
+        <li><strong>Виведену з ужитку</strong> каталог більше не показує. Якщо її вже здобули, у Лілейці вона лишається.</li>
+      </ul>
+    </section>
+
+    <section class="tile">
+      <h2>Як додати свою вмілість</h2>
+      <p>Звернися до редактора свого краю. Редактори вносять зміни через адмінку. Автори поза редакцією надсилають архів з описом і зображеннями, і редактор краю погоджує його перед публікацією.</p>
+      <p>Як підготувати такий архів, описано в <a href="https://github.com/iamavasya/ProjectK.ProbeAndBadges/blob/master/docs/catalog-format.md">описі формату</a>.</p>
+    </section>
+
+    <section class="tile">
+      <h2>Для розробників</h2>
+      <p>Каталог відкритий через API, ключ не потрібен. Відповіді кешуються, а зображення мають постійні адреси.</p>
+      <pre><code>GET /v1/catalog?krai=cz
+GET /v1/badges?ulad=upyu&amp;category=mystetska
+GET /v1/probes/probe-1</code></pre>
+      <p>Усі запити й поля описані в <a href="https://github.com/iamavasya/ProjectK.ProbeAndBadges/blob/master/docs/catalog-service.md">документації сервісу</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site">
+    <a href="/">До каталогу</a>
+  </footer>
+</body>
+</html>

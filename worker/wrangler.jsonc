@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "projectk-catalog",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // /admin is the static admin page; everything under /v1 runs the Worker first.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/v1/*", "/health"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "catalog",
+      // `wrangler d1 create catalog` prints the id; put it here before the first deploy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "projectk-catalog" }],
+  "vars": {
+    // Zero Trust → Settings → Custom pages shows the team domain; the Access application
+    // guarding /admin, /v1/admin and /v1/submissions shows its AUD tag.
+    "ACCESS_TEAM_DOMAIN": "https://CHANGE-ME.cloudflareaccess.com",
+    "ACCESS_AUD": "CHANGE-ME",
+    "OWNER_EMAILS": "snowyfl1cker@gmail.com"
+  },
+  "observability": { "enabled": true }
+}

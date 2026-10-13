@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "source": {
+    "krai": "cz",
+    "name": "Пласт у Чехії, станиця Прага",
+    "contact": "catalog@example.org"
+  },
+  "badges": [
+    {
+      "id": "cz-istoriia-ukraintsiv-u-chekhii-i",
+      "family": "cz-istoriia-ukraintsiv-u-chekhii",
+      "level": 1,
+      "title": "Історія українців у Чехії I",
+      "categories": ["zahalni-vmilosti"],
+      "ulady": ["upyu"],
+      "status": "trial",
+      "images": { "color": "cz-istoriia-ukraintsiv-u-chekhii-i.svg" },
+      "prerequisites": [],
+      "requirements": [
+        { "id": "1", "text": "Розповість про українську еміграцію до Праги в 1920-х роках." },
+        { "id": "2", "text": "Відвідає одне з місць, повʼязаних з українцями в Празі, і розповість про нього на сходинах гуртка." }
+      ],
+      "instructorRequirements": "Інструктор має цю вмілість або фахову освіту з історії.",
+      "author": "ст.пл. Ім'я Прізвище",
+      "updatedOn": "2026-10-13"
+    }
+  ],
+  "overrides": [
+    {
+      "krai": "cz",
+      "target": "probe:probe-1",
+      "addPoints": [
+        { "section": "А", "id": "cz-probe-1-a-1", "text": "Знає історію Пласту в Чехії." }
+      ]
+    },
+    {
+      "krai": "cz",
+      "target": "badge:aktorstvo-i",
+      "addRequirements": [
+        { "id": "cz-1", "text": "Візьме участь у виставі українського театру в Празі." }
+      ],
+      "note": "Додаткова вимога краю Чехія."
+    }
+  ]
+}

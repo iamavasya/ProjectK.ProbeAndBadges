@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Каталог · Лілейка</title>
+  <meta name="description" content="Вмілості, проби й відзначення Пласту для всіх уладів і країв: вимоги й зображення.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/manrope-var-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/brand.css">
+  <link rel="stylesheet" href="/catalog.css">
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <header class="toolbar">
+    <a class="lockup" href="/" aria-label="Лілейка, каталог">
+      <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(45 50 50)"><path d="M50 44 C54 33 62 28 71 33 C79 38 80 48 73 53 C68 56 62 55 60 51"/><path d="M50 44 C46 33 38 28 29 33 C21 38 20 48 27 53 C32 56 38 55 40 51"/><path d="M33 60 H67"/><path d="M50 88 C46 80 46 71 50 65 C54 71 54 80 50 88 Z"/><path class="mark-center" d="M50 7 C45 24 45 43 50 57 C55 43 55 24 50 7 Z"/></g></svg><span class="wordmark">Лілейка</span><span class="sub">каталог</span>
+    </a>
+    <nav>
+      <a class="navlink" href="/" aria-current="page">Каталог</a>
+      <a class="navlink" href="/about">Що це</a>
+      <button class="btn btn-text" data-theme-toggle type="button">Темна тема</button>
+    </nav>
+  </header>
+
+  <div class="page">
+    <header class="page-head">
+      <h1>Вмілості, проби й відзначення</h1>
+      <p id="summary">Завантажую каталог…</p>
+    </header>
+
+    <section class="tile tools" aria-label="Фільтри">
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="navlink" role="tab" data-tab="badges" aria-selected="true">Вмілості</button>
+        <button class="navlink" role="tab" data-tab="probes" aria-selected="false">Проби</button>
+        <button class="navlink" role="tab" data-tab="awards" aria-selected="false">Відзначення</button>
+      </div>
+      <div class="filters">
+        <label class="field grow">Пошук<input id="search" type="search" placeholder="Назва або текст вимоги"></label>
+        <label class="field">Край<select id="krai"><option value="">усі краї</option></select></label>
+        <label class="field" id="field-category">Спеціалізація<select id="filter-category"><option value="">усі</option></select></label>
+        <label class="field">Улад<select id="filter-ulad"><option value="">усі</option></select></label>
+        <label class="field" id="field-status">Статус<select id="filter-status">
+          <option value="">усі</option>
+          <option value="approved">затверджені</option>
+          <option value="trial">апробаційні</option>
+        </select></label>
+      </div>
+    </section>
+
+    <p id="count" class="muted count"></p>
+    <ul id="items" class="grid"></ul>
+
+    <div id="empty" class="empty-state" hidden>
+      <svg viewBox="0 0 110 66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 18 H92"/><path d="M18 33 H92"/><path class="accent" d="M18 48 H54"/>
+        <circle cx="10" cy="18" r="3"/><circle cx="10" cy="33" r="3"/><circle cx="10" cy="48" r="3"/>
+      </svg>
+      <div class="empty-title">Нічого не знайшлось</div>
+      <div class="empty-body">Спробуй коротший запит або інший край.</div>
+      <button class="btn" id="reset" type="button">Скинути фільтри</button>
+    </div>
+
+    <div id="error" class="empty-state" hidden>
+      <div class="empty-title">Щось пішло не так</div>
+      <div class="empty-body" id="error-body">Каталог не завантажився. Спробуй за хвилину.</div>
+      <button class="btn" type="button" onclick="location.reload()">Оновити</button>
+    </div>
+  </div>
+
+  <dialog id="detail" aria-labelledby="detail-title">
+    <div id="detail-body"></div>
+  </dialog>
+
+  <footer class="site">
+    Ці дані відкриті: <a href="/v1/catalog">JSON через API</a>. Редакторам: <a href="/admin/">адмінка</a>.
+  </footer>
+  <script type="module" src="/catalog.js"></script>
+</body>
+</html>
