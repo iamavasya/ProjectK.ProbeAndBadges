@@ -14,7 +14,7 @@
       "binding": "DB",
       "database_name": "catalog",
       // `wrangler d1 create catalog` prints the id; put it here before the first deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "fb30b0d1-3246-4b1d-a3b4-89e7546236fd",
       "migrations_dir": "migrations"
     }
   ],
@@ -22,9 +22,11 @@
   "vars": {
     // Zero Trust → Settings → Custom pages shows the team domain; the Access application
     // guarding /admin, /v1/admin and /v1/submissions shows its AUD tag.
-    "ACCESS_TEAM_DOMAIN": "https://CHANGE-ME.cloudflareaccess.com",
-    "ACCESS_AUD": "CHANGE-ME",
+    "ACCESS_TEAM_DOMAIN": "https://billowing-lake-958a.cloudflareaccess.com",
+    "ACCESS_AUD": "32f8259e640702a140a5617181a5ec8db20e0301e3571a20f2c2a584e40881b4",
     "OWNER_EMAILS": "snowyfl1cker@gmail.com"
   },
+  // Cache API only works on a custom domain, not on *.workers.dev.
+  "routes": [{ "pattern": "catalog.rostyslav-mukha.dev", "custom_domain": true }],
   "observability": { "enabled": true }
 }
