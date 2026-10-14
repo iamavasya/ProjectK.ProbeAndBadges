@@ -143,6 +143,9 @@ button, .button, select, input, textarea { font: inherit; color: inherit; }
 .btn-secondary:hover { background: var(--primary-50); border-color: var(--primary); }
 .btn-text { background: transparent; border-color: transparent; color: var(--ink-soft); }
 .btn-text:hover { background: var(--hover-bg); border-color: transparent; }
+a.btn:hover { text-decoration: none; color: var(--on-primary); }
+a.btn-secondary:hover { color: var(--primary); }
+a.btn-text:hover { color: var(--ink-soft); }
 button:disabled, .btn:disabled { opacity: 0.4; cursor: default; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 

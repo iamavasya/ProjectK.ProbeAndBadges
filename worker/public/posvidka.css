@@ -1,0 +1,70 @@
+/* Посвідка page: a form beside a landscape A6 sheet. The sheet is measured in mm and printed as
+   is; it is paper, so its colours stay light in the dark theme and do not use the theme tokens.
+   Brand rules hold on paper too: Manrope only, 1px lines, one green, and the terracotta appears
+   once, in the centre petal of the watermark. */
+
+@page { size: 148mm 105mm; margin: 0; }
+
+.layout { display: grid; grid-template-columns: minmax(280px, 1fr) auto; gap: 20px; align-items: start; }
+.form { display: grid; gap: 14px; }
+.kinds { display: flex; gap: 4px; flex-wrap: wrap; }
+.kinds .navlink { cursor: pointer; font-size: 15px; }
+.kinds input { position: absolute; opacity: 0; pointer-events: none; }
+.kinds .navlink:has(input:checked) { background: var(--primary-50); color: var(--primary); font-weight: 700; }
+.kinds .navlink:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+.row { display: flex; gap: 8px; }
+.row input { flex: 1; }
+.field input, .field select { color: var(--ink); font-weight: 400; font-size: 15px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.hint { font-size: 13px; color: var(--muted); }
+
+.preview { display: flex; justify-content: center; min-width: 0; }
+
+.sheet {
+  --s-ink: #101413;
+  --s-soft: #2e3633;
+  --s-muted: #6e7873;
+  --s-primary: #0e6e4e;
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 148mm; height: 105mm; flex: none; padding: 8mm 10mm 7mm;
+  display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); gap: 3mm;
+  background: #ffffff; color: var(--s-ink);
+  border: 1px solid var(--line); border-radius: 4px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+/* One hairline frame (the brand has no double borders), inset so a printer's margin cannot clip it. */
+.sheet::before {
+  content: ""; position: absolute; inset: 4mm; z-index: -1;
+  border: 0.26mm solid color-mix(in srgb, var(--s-primary) 35%, transparent); border-radius: 3mm;
+}
+.watermark { position: absolute; z-index: -1; width: 104mm; height: 104mm; right: -14mm; bottom: -16mm; opacity: 0.1; }
+
+.org { font-size: 6pt; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--s-muted); }
+.body { display: grid; grid-template-columns: 36mm 1fr; gap: 8mm; align-items: center; min-height: 0; }
+.emblem { width: 36mm; height: 36mm; }
+.emblem img { width: 100%; height: 100%; object-fit: contain; }
+.emblem img:not([src]) { display: none; }
+.text { display: grid; gap: 1.2mm; min-width: 0; }
+.heading { font-size: 26pt; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--s-ink); margin-bottom: 1mm; }
+.say { font-size: 8.5pt; line-height: 1.3; color: var(--s-soft); }
+.fill { min-height: 6.5mm; padding-bottom: 0.6mm; border-bottom: 0.26mm solid var(--s-soft); display: flex; align-items: flex-end; line-height: 1.15; }
+.fill.name { font-size: 13pt; font-weight: 700; }
+.fill.title { font-size: 11pt; font-weight: 800; color: var(--s-primary); text-wrap: balance; }
+.skob { margin-top: 1.8mm; font-size: 13pt; font-weight: 800; letter-spacing: 0.06em; color: var(--s-primary); }
+
+.given { display: grid; grid-template-columns: 36mm 1fr 1fr; column-gap: 8mm; align-items: end; }
+.given-label { font-size: 8.5pt; font-weight: 600; color: var(--s-soft); padding-bottom: 4mm; }
+.slot { display: grid; }
+.slot .fill { min-height: 6mm; justify-content: center; font-size: 9pt; font-weight: 700; }
+.slot .caption { margin-top: 0.6mm; text-align: center; font-size: 6pt; color: var(--s-muted); }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media print {
+  html, body { background: #ffffff; }
+  body > :not(main), .page-head, .form, #error { display: none !important; }
+  .page, .layout, .preview { display: block; width: auto; margin: 0; padding: 0; }
+  .sheet { zoom: 1 !important; border: 0; border-radius: 0; }
+}

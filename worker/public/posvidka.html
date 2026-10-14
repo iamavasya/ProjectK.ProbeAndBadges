@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Посвідка · Каталог · Лілейка</title>
+  <meta name="description" content="Посвідка про здобуття вмілості чи відзначення у форматі A6: вибери пункт, дату й надрукуй.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/manrope-var-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/brand.css">
+  <link rel="stylesheet" href="/posvidka.css">
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <header class="toolbar">
+    <a class="lockup" href="/" aria-label="Лілейка, каталог">
+      <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(45 50 50)"><path d="M50 44 C54 33 62 28 71 33 C79 38 80 48 73 53 C68 56 62 55 60 51"/><path d="M50 44 C46 33 38 28 29 33 C21 38 20 48 27 53 C32 56 38 55 40 51"/><path d="M33 60 H67"/><path d="M50 88 C46 80 46 71 50 65 C54 71 54 80 50 88 Z"/><path class="mark-center" d="M50 7 C45 24 45 43 50 57 C55 43 55 24 50 7 Z"/></g></svg><span class="wordmark">Лілейка</span><span class="sub">каталог</span>
+    </a>
+    <nav>
+      <a class="navlink" href="/">Каталог</a>
+      <a class="navlink" href="/posvidka" aria-current="page">Посвідки</a>
+      <a class="navlink" href="/about">Що це</a>
+      <a class="navlink" href="/docs">Документація</a>
+      <button class="btn btn-text" data-theme-toggle type="button">Темна тема</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <header class="page-head">
+      <h1>Посвідка</h1>
+      <p id="summary">Вибери вмілість чи відзначення, перевір дату й надрукуй на A6.</p>
+    </header>
+
+    <div class="layout">
+      <form class="tile form" id="form" autocomplete="off">
+        <div class="kinds" role="radiogroup" aria-label="Що посвідчуємо">
+          <label class="navlink"><input type="radio" name="kind" value="badges" checked>Вмілість</label>
+          <label class="navlink"><input type="radio" name="kind" value="awards">Відзначення</label>
+        </div>
+        <label class="field">Пункт каталогу<select id="item" disabled><option>Завантажую…</option></select></label>
+        <label class="field">Ім'я та прізвище<input id="name" placeholder="Порожнє лишить лінію, щоб вписати від руки"></label>
+        <label class="field">Форма дієслова<select id="verb">
+          <option value="відповів">відповів</option>
+          <option value="відповіла">відповіла</option>
+        </select></label>
+        <div class="field">
+          <label for="date">Дата</label>
+          <div class="row">
+            <input id="date" type="date" required>
+            <button class="btn btn-secondary" id="today" type="button">Сьогодні</button>
+          </div>
+        </div>
+        <label class="field" id="field-image" hidden>Зображення<select id="image">
+          <option value="color">кольорове</option>
+          <option value="bw">чорно-біле</option>
+        </select></label>
+        <div class="actions">
+          <button class="btn" id="print" type="submit" disabled>Друкувати</button>
+          <a class="btn btn-text" id="back" href="/">До каталогу</a>
+        </div>
+        <p class="hint">У вікні друку вибери розмір паперу A6, альбомну орієнтацію і масштаб 100%. Щоб отримати файл, вибери «Зберегти як PDF».</p>
+      </form>
+
+      <section class="preview" id="preview" aria-label="Перегляд посвідки">
+        <article class="sheet" id="sheet">
+          <svg class="watermark" viewBox="0 0 100 100" fill="none" stroke="#0e6e4e" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(45 50 50)"><path d="M50 44 C54 33 62 28 71 33 C79 38 80 48 73 53 C68 56 62 55 60 51"/><path d="M50 44 C46 33 38 28 29 33 C21 38 20 48 27 53 C32 56 38 55 40 51"/><path d="M33 60 H67"/><path d="M50 88 C46 80 46 71 50 65 C54 71 54 80 50 88 Z"/><path d="M50 7 C45 24 45 43 50 57 C55 43 55 24 50 7 Z" stroke="#d9762f"/></g></svg>
+          <p class="org">Пласт — Національна скаутська організація України</p>
+          <div class="body">
+            <div class="emblem"><img id="s-image" alt=""></div>
+            <div class="text">
+              <h2 class="heading">Посвідка</h2>
+              <p class="say">стверджує, що</p>
+              <p class="fill name" id="s-name"></p>
+              <p class="say"><span id="s-verb"></span> всім вимогам <span id="s-noun"></span></p>
+              <p class="fill title" id="s-title"></p>
+              <p class="say">та має право носити <span id="s-pronoun"></span> відзнаку</p>
+              <p class="skob">СКОБ!</p>
+            </div>
+          </div>
+          <div class="given">
+            <span class="given-label">Дано:</span>
+            <div class="slot"><span class="fill" id="s-date"></span><span class="caption">дата</span></div>
+            <div class="slot"><span class="fill"></span><span class="caption">підпис</span></div>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <div id="error" class="empty-state" hidden>
+      <div class="empty-title">Щось пішло не так</div>
+      <div class="empty-body" id="error-body">Каталог не завантажився. Спробуй за хвилину.</div>
+      <button class="btn" type="button" onclick="location.reload()">Оновити</button>
+    </div>
+  </main>
+
+  <script type="module" src="/posvidka.js"></script>
+</body>
+</html>

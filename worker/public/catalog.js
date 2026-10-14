@@ -133,7 +133,13 @@ function detailHtml(kind, x) {
       ${img ? `<div><img class="art" alt="" src="${esc(img)}"></div>` : ""}
       <div><h2 id="detail-title">${esc(x.title)}</h2><div class="tags">${tags}</div></div>
     </div>${body}
-    <div class="modal-actions"><button class="btn btn-secondary close" type="button">Закрити</button></div>`;
+    <div class="modal-actions">${kind === "probes" ? "" : `<a class="btn" href="${esc(posvidkaUrl(kind, x.id))}">Посвідка</a>`}<button class="btn btn-secondary close" type="button">Закрити</button></div>`;
+}
+
+function posvidkaUrl(kind, id) {
+  const q = new URLSearchParams({ kind, id });
+  if (state.krai) q.set("krai", state.krai);
+  return `/posvidka?${q}`;
 }
 
 function openFromHash() {
