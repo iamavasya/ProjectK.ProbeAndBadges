@@ -27,6 +27,10 @@
     "OWNER_EMAILS": "snowyfl1cker@gmail.com"
   },
   // Cache API only works on a custom domain, not on *.workers.dev.
-  "routes": [{ "pattern": "catalog.rostyslav-mukha.dev", "custom_domain": true }],
+  // The old host stays: self-host installs already in the field read it.
+  "routes": [
+    { "pattern": "catalog.lileyka.app", "custom_domain": true },
+    { "pattern": "catalog.rostyslav-mukha.dev", "custom_domain": true }
+  ],
   "observability": { "enabled": true }
 }

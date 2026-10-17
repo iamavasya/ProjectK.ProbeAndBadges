@@ -333,7 +333,7 @@
         "type": "object",
         "required": ["color", "bw"],
         "properties": {
-          "color": { "type": ["string", "null"], "format": "uri", "description": "Кольорове зображення.", "example": "https://catalog.rostyslav-mukha.dev/v1/images/alpinistyka_i_color.svg?v=b84363961c8d" },
+          "color": { "type": ["string", "null"], "format": "uri", "description": "Кольорове зображення.", "example": "https://catalog.lileyka.app/v1/images/alpinistyka_i_color.svg?v=b84363961c8d" },
           "bw": { "type": ["string", "null"], "format": "uri", "description": "Чорно-біле: його показують, поки вмілість не здобута.", "example": null }
         }
       },
