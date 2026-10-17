@@ -31,7 +31,7 @@ public sealed class BadgesCatalogOptions
     public string? ReleaseDataZipUrl { get; set; }
 
     // Used when DataSource = Auto and ReleaseDataZipUrl is not set.
-    public string LatestReleaseApiUrl { get; set; } = "https://api.github.com/repos/iamavasya/PlastBadgesParser/releases/latest";
+    public string LatestReleaseApiUrl { get; set; } = "https://api.github.com/repos/lileyka-app/PlastBadgesParser/releases/latest";
 
     // Wildcard pattern for selecting release data asset in latest release.
     public string LatestReleaseAssetNamePattern { get; set; } = "plast-badges-data-*.zip";
